@@ -22,14 +22,48 @@ import static util.FileUtil.readFile;
 public class Commits implements Map<String, Commit> {
     private final TreeMap<String, Commit> commits = new TreeMap<>();
 
-    public void completeAuthor(People people) {
-        for (Commit commit: commits.values()) {
-            commit.author=people.get(commit.author.name);
+    public void embedBugInfo(Bugs bugsAll, Modules modulesAll) {
+        //それぞれのパスについて、一番過去のdateBugIntroducedを特定して、path2dateBugIntroOldestに保存。
+        Map<String, Integer> path2dateBugIntroOldest = new HashMap<>();
+        for(String module: modulesAll.keySet()){
+            path2dateBugIntroOldest.put(module, Integer.MAX_VALUE);
+        }
+        for(Bug bug: bugsAll.values()){
+            for(BugAtomic bugAtomic: bug.bugAtomics){
+                int dateFix = commits.get(bugAtomic.idCommitFix).date;
+                path2dateBugIntroOldest.replace(bugAtomic.path, dateFix);
+                for(String idCommitInduce: bugAtomic.idsCommitInduce) {
+                    int dateIntro = commits.get(idCommitInduce).date;
+                    if (path2dateBugIntroOldest.get(bugAtomic.path) != null
+                            && dateIntro < path2dateBugIntroOldest.get(bugAtomic.path)) {
+                        path2dateBugIntroOldest.replace(bugAtomic.path, dateIntro);
+                    }
+                }
+            }
+        }
+        //それぞれのコミットで変更されているパスについて、path2dateBugIntroOldestより後ならpathsHasBeenBuggyに追加。
+        for(Commit commit: commits.values()){
+            for(ChangesOnModule changesOnModule: commit.idParent2Modifications.values()){
+                for(ChangeOnModule changeOnModule: changesOnModule.values()){
+                    if(Objects.equals(changeOnModule.type, "ADD"))continue;
+                    if(changeOnModule.date<path2dateBugIntroOldest.get(changeOnModule.pathOld)){
+                        commit.pathsHasBeenBuggy.add(changeOnModule.pathOld);
+                    }
+                }
+            }
+        }
+        //それぞれのバグのそれぞれのパスについて、introコミットのpathsBugIntroducedリストにそのパスを追加。
+        for(Bug bug: bugsAll.values()) {
+            for (BugAtomic bugAtomic : bug.bugAtomics) {
+                for(String idCommitInduce: bugAtomic.idsCommitInduce) {
+                    commits.get(idCommitInduce).pathsBugIntroduced.add(bugAtomic.path);
+                }
+            }
         }
     }
 
     public void loadCommitsFromRepository(Repository repository, String pathCommits){
-        List<RevCommit> commitsAll = new ArrayList<RevCommit>();
+        List<RevCommit> commitsAll = new ArrayList<>();
         Collection<Ref> allRefs = repository.getAllRefs().values();
         try (RevWalk revWalk = new RevWalk(repository)) {
             for(Ref ref : allRefs) {

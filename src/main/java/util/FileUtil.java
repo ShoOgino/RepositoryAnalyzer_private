@@ -45,6 +45,9 @@ public class FileUtil {
                     Files.walk(Paths.get(dirRoot))
                             .map(Path::toString)
                             .filter(p -> p.endsWith(ext))
+                            .filter(p -> !p.endsWith("ConcatenationWithStringValueOfCheck.java"))
+                            .filter(p -> !p.endsWith("Scope.java"))
+                            .filter(p -> !p.endsWith("EmptyBlockCheck.java"))
                             .collect(Collectors.toList())
             );
         } catch (IOException e) {
@@ -71,5 +74,4 @@ public class FileUtil {
         }
         return pathsFile;
     }
-
 }

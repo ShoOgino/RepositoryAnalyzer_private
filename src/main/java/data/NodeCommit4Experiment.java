@@ -9,9 +9,9 @@ public class NodeCommit4Experiment {
     public boolean isMerge;
     public boolean isFixingBug;
     public Integer interval = 10000;//days
-    public Person author = null;
+    public String author = null;
     public Integer[] semantics = new Integer[396];//396
-    public Set<Integer> coupling = new HashSet<>();
+    public Set<String> coupling = new HashSet<>();
     public Integer[] churn = new Integer[3];
     public List<Integer> parents = new ArrayList<>();
 

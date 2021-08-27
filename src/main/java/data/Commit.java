@@ -11,17 +11,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class Commit {
 	public String id = null;
 	public Integer date = null;
-	public Person author =null ;
+	public String author = null ;
 	public boolean isMerge = false;
 	public Map<String, ChangesOnModule> idParent2Modifications = new HashMap<>();
 	public String idParentMaster = null;
+	List<String> pathsHasBeenBuggy = new ArrayList<>();
+	List<String> pathsBugIntroduced = new ArrayList<>();
 	public Commit() {
 	}
 

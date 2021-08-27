@@ -10,7 +10,7 @@ public class ChangeOnModule {
 	public String idCommit;
 	public String idCommitParent;
 	public int date;
-	public Person author = null;
+	public String author = null;
 	public boolean isMerge;
 	public String type;
 	public String pathNew;
@@ -30,7 +30,7 @@ public class ChangeOnModule {
 		this.idCommit= "";
 		this.idCommitParent = "";
 		this.date=0;
-		this.author=new Person();
+		this.author="";
 		this.isMerge=false;
 		this.pathOld= "";
 		this.pathNew= "";

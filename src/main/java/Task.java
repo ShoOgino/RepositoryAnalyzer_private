@@ -1,5 +1,6 @@
 import data.Bugs;
 import data.Commits;
+import data.Module;
 import data.Modules;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -78,23 +79,23 @@ public class Task implements Runnable{
             modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethod_target);
 
             // calculate products on the target modules
+            if (product.contains("commitGraph")){
+                modulesTarget.calculateCommitGraph(commitsAll, modulesAll, revisionMethod_referHistoryFrom, revisionMethod_target, bugsAll);
+            }
+            if (product.contains("metrics")) {
+                modulesTarget.calculateProcessMetrics(commitsAll, modulesAll, bugsAll, revisionMethod_referHistoryFrom, revisionMethod_target, revisionMethod_referBugReportsUntil);
+                modulesTarget.calculateCodeMetrics(repositoryFile, revisionFile_target, repositoryMethod, revisionMethod_target);
+            }
             if (product.contains("tokens")){
             }
             if (product.contains("AST")) {
                 modulesTarget.calculateAST(repositoryMethod, revisionMethod_target);
             }
-            if (product.contains("commitGraph")){
-                modulesTarget.calculateCommitGraph(commitsAll, modulesAll, revisionMethod_referHistoryFrom, revisionMethod_target, bugsAll);
-            }
-            if (product.contains("metrics")) {
-                modulesTarget.calculateCodeMetrics(repositoryFile, revisionFile_target, repositoryMethod, revisionMethod_target);
-                modulesTarget.calculateProcessMetrics(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
-            }
             if(product.contains("isBuggy")){
                 modulesTarget.calculateIsBuggy(commitsAll, revisionMethod_target, revisionMethod_referBugReportsUntil, bugsAll);
             }
             if(product.contains("hasBeenBuggy")){
-                modulesTarget.calculateHasBeenBuggy(commitsAll, revisionMethod_target, bugsAll);
+                modulesTarget.calculateHasBeenBuggy(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target, bugsAll);
             }
 
             // save data

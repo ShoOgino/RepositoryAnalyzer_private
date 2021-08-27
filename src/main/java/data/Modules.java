@@ -11,6 +11,7 @@ import misc.DoubleConverter;
 import me.tongfei.progressbar.ProgressBar;
 import net.sf.jsefa.Serializer;
 import net.sf.jsefa.csv.CsvIOFactory;
+import net.sf.jsefa.csv.annotation.CsvField;
 import net.sf.jsefa.csv.config.CsvConfiguration;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -39,13 +40,13 @@ public class Modules implements Map<String, Module> {
 
     public void analyzeAllModules(Commits commits) {
         identifyChangesOnModule(commits);
-        giveNumberToModules();
         analyzeDevelopmentHistoryOnModule(commits);
         completeDevelopmentHistoryOnModule();
         identifyCommitsHead();
         identifyCommitsRoot();
     }
 
+    /*
     private void giveNumberToModules() {
         int index = 0;
         for (Entry<String, Module> entry:modules.entrySet()) {
@@ -54,6 +55,7 @@ public class Modules implements Map<String, Module> {
             entry.getValue().numOfModulesAll = modules.size();
         }
     }
+     */
 
     public void identifyChangesOnModule(Commits commits) {
         for (Commit commit : ProgressBar.wrap(commits.values(), "identifyChangeOnModules")) {
@@ -193,7 +195,15 @@ public class Modules implements Map<String, Module> {
         for (String pathSource : ProgressBar.wrap(pathSources, "identifyTargetModules")) {
             //Module module = new Module(pathSource);
             Module moduleTarget = modulesAll.get(pathSource).clone();
-            if (!pathSource.contains("test")) modules.put(pathSource, moduleTarget);
+            if (!pathSource.contains("test")
+                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/formatter/org/eclipse/jdt/internal/formatter/DefaultCodeFormatterOptions#set(Map).mjava")
+                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/compiler/org/eclipse/jdt/internal/compiler/parser/Parser#consumeRule(int).mjava")
+                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/formatter/org/eclipse/jdt/internal/formatter/DefaultCodeFormatterOptions#getMap().mjava")
+                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/model/org/eclipse/jdt/internal/core/util/CodeAttribute#traverse(IBytecodeVisitor).mjava")
+                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/batch/org/eclipse/jdt/internal/compiler/batch/Main#configure(String[]).mjava")
+            ){
+                modules.put(pathSource, moduleTarget);
+            }
             //if(!pathSource.contains("test") & 0<commitsInInterval.size()) modules.put(pathSource, moduleTarget);
         }
     }
@@ -209,11 +219,18 @@ public class Modules implements Map<String, Module> {
 
     public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, Bugs bugsAll) throws IOException {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateCommitGraph")) {
+            long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
             module.calcCommitsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
             module.calcModificationsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
             module.calcCommitGraph(commitsAll, modulesAll, revisionMethod_target, bugsAll);
+            long endTimeOverall = System.currentTimeMillis();
+            if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
+                System.out.println(pathModule);
+                System.out.println("処理時間：" + (endTimeOverall - startTimeOverall)/(1000) + " s");
+            }
         }
+        System.out.println("");
     }
 
     public void calculateCodeMetrics(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
@@ -231,50 +248,59 @@ public class Modules implements Map<String, Module> {
             module.calcComplexity();
             module.calcExecStmt();
             module.calcMaxNesting();
+            //fine-grained
+            /*
+            module.calcLOC();
+
+             */
         }
     }
 
     public void calculateFanIn(String pathRepositoryFile) {
-        System.out.println("calculating FanIn...");
-        final String[] sourcePathDirs = {};
-        final String[] libraries = findFiles(pathRepositoryFile, ".jar").toArray(new String[0]);
-        final String[] sources = findFiles(pathRepositoryFile, ".java").toArray(new String[0]);
+        try {
+            System.out.println("calculating FanIn...");
+            final String[] sourcePathDirs = {};
+            final String[] libraries = findFiles(pathRepositoryFile, ".jar").toArray(new String[0]);
+            final String[] sources = findFiles(pathRepositoryFile, ".java").toArray(new String[0]);
 
-        ASTParser parser = ASTParser.newParser(AST.JLS14);
-        final Map<String, String> options = JavaCore.getOptions();
-        options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_14);
-        options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_14);
-        options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_14);
-        parser.setCompilerOptions(options);
-        parser.setResolveBindings(true);
-        parser.setKind(ASTParser.K_COMPILATION_UNIT);
-        parser.setBindingsRecovery(true);
-        parser.setStatementsRecovery(true);
-        parser.setEnvironment(libraries, sourcePathDirs, null, true);
-
-        String[] keys = new String[]{""};
-        RequesterFanIn requesterFanIn = new RequesterFanIn(modules);
-        parser.createASTs(sources, null, keys, requesterFanIn, new NullProgressMonitor());
-        //int countCalledMethod = 0;
-        for (String idMethodCalled : ProgressBar.wrap(requesterFanIn.methodsCalled, "processMethodCalled")) {
-            if (idMethodCalled == null) continue;
-            //countCalledMethod++;
-            boolean flag = false;
-            for (String pathMethod : modules.keySet()) {
-                String idMethod = modules.get(pathMethod).id;
-                if (Objects.equals(idMethod, idMethodCalled)) {
-                    modules.get(pathMethod).fanIn++;
-                    //flag=true;
-                    break;
+            ASTParser parser = ASTParser.newParser(AST.JLS14);
+            final Map<String, String> options = JavaCore.getOptions();
+            options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_14);
+            options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_14);
+            options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_14);
+            parser.setCompilerOptions(options);
+            parser.setResolveBindings(true);
+            parser.setKind(ASTParser.K_COMPILATION_UNIT);
+            parser.setBindingsRecovery(true);
+            parser.setStatementsRecovery(true);
+            parser.setEnvironment(libraries, sourcePathDirs, null, true);
+            String[] keys = new String[]{""};
+            RequesterFanIn requesterFanIn = new RequesterFanIn(modules);
+            parser.createASTs(sources, null, keys, requesterFanIn, new NullProgressMonitor());
+            //int countCalledMethod = 0;
+            for (String idMethodCalled : ProgressBar.wrap(requesterFanIn.methodsCalled, "processMethodCalled")) {
+                if (idMethodCalled == null) continue;
+                //countCalledMethod++;
+                boolean flag = false;
+                for (String pathMethod : modules.keySet()) {
+                    String idMethod = modules.get(pathMethod).id;
+                    if (Objects.equals(idMethod, idMethodCalled)) {
+                        modules.get(pathMethod).fanIn++;
+                        //flag=true;
+                        break;
+                    }
                 }
+                //if(!flag)System.out.println(idMethodCalled);
             }
-            //if(!flag)System.out.println(idMethodCalled);
+            System.out.println("FanIn caluculated");
+        }catch(Exception exception){
+            exception.printStackTrace();
         }
-        System.out.println("FanIn caluculated");
     }
 
-    public void calculateProcessMetrics(Commits commitsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target) {
+    public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, String revisionMethod_Until) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcProcessMetrics")) {
+            long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
             module.calcCommitsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
             module.calcModificationsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
@@ -293,6 +319,45 @@ public class Modules implements Map<String, Module> {
             module.calcCond();
             module.calcElseAdded();
             module.calcElseDeleted();
+
+            //fine-grained...
+/*
+            module.calcAddLOC();
+            module.calcDelLOC();
+            module.calcDevMinor();
+            module.calcDevMajor();
+            module.calcOwnership();
+            //long startTimeFixChgNum = System.currentTimeMillis();
+            module.calcFixChgNum(commitsAll, bugsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
+            //long endTimeFixChgNum = System.currentTimeMillis();
+            //System.out.println("calcFixChgNum：" + (endTimeFixChgNum - startTimeFixChgNum)/(1000) + " s");
+
+            //long startTimePastBugNum = System.currentTimeMillis();
+            module.calcPastBugNum(commitsAll, bugsAll, revisionMethod_referHistoryFrom, revisionMethod_target, revisionMethod_Until);
+            //long endTimePastBugNum = System.currentTimeMillis();
+            //System.out.println("pastBugNum：" + (endTimePastBugNum - startTimePastBugNum)/(1000) + " s");
+
+            //long startTimeBugIntroNum = System.currentTimeMillis();
+            module.calcBugIntroNum();
+            //long endTimeBugIntroNum = System.currentTimeMillis();
+            //System.out.println("bugIntroNum：" + (endTimeBugIntroNum - startTimeBugIntroNum)/(1000) + " s");
+
+            //long startTimeLogCoupNum = System.currentTimeMillis();
+            module.calcLogCoupNum();
+            //long endTimeLogCoupNum = System.currentTimeMillis();
+            //System.out.println("pastLogCoupNum：" + (endTimeLogCoupNum - startTimeLogCoupNum)/(1000) + " s");
+
+            module.calcPeriod(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
+            module.calcAvgInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
+            module.calcMaxInterval();
+            module.calcMinInterval();
+
+            long endTimeOverall = System.currentTimeMillis();
+            if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
+                System.out.println(pathModule);
+                System.out.println("処理時間：" + (endTimeOverall - startTimeOverall)/(1000) + " s");
+            }
+ */
         }
     }
 
@@ -303,10 +368,10 @@ public class Modules implements Map<String, Module> {
         }
     }
 
-    public void calculateHasBeenBuggy(Commits commitsAll, String revisionMethod_target, Bugs bugsAll) {
+    public void calculateHasBeenBuggy(Commits commitsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, Bugs bugsAll) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateHasBeenBuggy")) {
             Module module = modules.get(pathModule);
-            module.calcHasBeenBuggy(commitsAll, revisionMethod_target, bugsAll);
+            module.calcHasBeenBuggy(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target, bugsAll);
         }
     }
 

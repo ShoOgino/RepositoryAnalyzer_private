@@ -1,13 +1,14 @@
 package misc;
 
 import org.kohsuke.args4j.Option;
-import org.kohsuke.args4j.spi.StringArrayOptionHandler;
 
 public class ArgBean {
-    @Option(name = "--pathProject", metaVar = "pathProject", required = true)
-    public  String pathProject = new String() ;
+    @Option(name = "--pathProject", required = true)
+    public  String pathProject;
     @Option(name = "--loadHistoryFromFile")
-    public boolean loadHistoryFromFile;
+    public boolean loadHistoryFromFile = false;
     @Option(name = "--multiProcess")
-    public boolean multiProcess;
+    public boolean multiProcess = false;
+    @Option(name = "--pathFileTask", required = true)
+    public String pathFileTask;
 }

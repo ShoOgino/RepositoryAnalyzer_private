@@ -7,21 +7,22 @@ import java.util.TreeMap;
 
 public class People extends TreeMap<String, Person> {
     private final TreeMap<String, Person> people = new TreeMap<>();
-
+    /*
     public void analyze(Commits commitsAll) {
         for(Commit commit: commitsAll.values()){
-            if(!people.containsKey(commit.author.name)){
-                people.put(commit.author.name, commit.author);
+            if(!people.containsKey(commit.author)){
+                people.put(commit.author, commit.author);
             }
         }
     }
+     */
 
     public void giveNumberToPerson(){
-        int index = 0;
+        int index = 2;
         for (Person person: people.values()) {
             person.num=index;
             index+=1;
-            person.numOfPeopleAll = people.size();
+            person.numOfPeopleAll = people.size()+2;
         }
     }
 
