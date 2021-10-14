@@ -56,7 +56,7 @@ public class Module implements Cloneable {
     public ArrayList<String> commitsHead = null;
     public ArrayList<String> commitsRoot = null;
     @CsvField(pos = 2) int isBuggy = 0;
-    //code metrics()
+    //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
     @CsvField(pos = 3) int fanIn = 0;
     @CsvField(pos = 4) int fanOut = 0;
     @CsvField(pos = 5) int parameters = 0;
@@ -66,7 +66,7 @@ public class Module implements Cloneable {
     @CsvField(pos = 9) int complexity = 0;
     @CsvField(pos = 10) int execStmt = 0;
     @CsvField(pos = 11) int maxNesting = 0;
-    //process metrics()
+    //process metrics(Bug Prediction Based on Fine-Grained Module Histories)
     @CsvField(pos = 12) int moduleHistories = 0;
     @CsvField(pos = 13) int authors = 0;
     @CsvField(pos = 14) int stmtAdded = 0;
@@ -82,36 +82,23 @@ public class Module implements Cloneable {
     @CsvField(pos = 24) int cond = 0;
     @CsvField(pos = 25) int elseAdded = 0;
     @CsvField(pos = 26) int elseDeleted = 0;
-    //codeMetrics()
+    //codeMetrics(Re-evaluating Method-Level Bug Prediction)
     @CsvField(pos = 27) int hasBeenBuggy = 0;
     int LOC = 0;
-    //processMetrics
-    //@CsvField(pos = 28)
-    int addLOC = 0;
-    //@CsvField(pos = 29)
-    int delLOC = 0;
-    //@CsvField(pos = 30)
-    int devMinor = 0;
-    //@CsvField(pos = 31)
-    int devMajor = 0;
-    //@CsvField(pos = 32)
-    double ownership = 0;
-    //@CsvField(pos = 33)
-    int fixChgNum = 0;
-    //@CsvField(pos = 34)
-    int pastBugNum = 0;
-    //@CsvField(pos = 35)
-    int bugIntroNum = 0;
-    //@CsvField(pos = 36)
-    int logCoupNum = 0;
-    //@CsvField(pos = 37)
-    int period = 0;
-    //@CsvField(pos = 38)
-    double avgInterval = 0;
-    //@CsvField(pos = 39)
-    int maxInterval = 0;
-    //@CsvField(pos = 40)
-    int minInterval = 0;
+    //processMetrics(Re-evaluating Method-Level Bug Prediction)
+    @CsvField(pos = 28) int addLOC = 0;
+    @CsvField(pos = 29) int delLOC = 0;
+    @CsvField(pos = 30) int devMinor = 0;
+    @CsvField(pos = 31) int devMajor = 0;
+    @CsvField(pos = 32) double ownership = 0;
+    @CsvField(pos = 33) int fixChgNum = 0;
+    @CsvField(pos = 34) int pastBugNum = 0;
+    @CsvField(pos = 35) int bugIntroNum = 0;
+    @CsvField(pos = 36) int logCoupNum = 0;
+    @CsvField(pos = 37) int period = 0;
+    @CsvField(pos = 38) double avgInterval = 0;
+    @CsvField(pos = 39) int maxInterval = 0;
+    @CsvField(pos = 40) int minInterval = 0;
 
     public Module clone() {
         Module module = null;
@@ -531,82 +518,6 @@ public class Module implements Cloneable {
             }
         }
     }
-
-/*
-
-	public void calcBugIntroNum(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String revisionMethod_Until) {
-		for(Commit commit : commitsInInterval){
-			if(isCommitInducingBugToOtherModule(commit, commitsAll, modulesAll, bugsAll, revisionMethod_Until)){
-				this.bugIntroNum++;
-			}
-		}
-	}
-	public boolean isCommitInducingBugToOtherModule(Commit commit, Commits commitsAll, Modules modulesAll, Bugs bugsAll, String revisionMethod_Until){
-        //for(ChangesOnModule changesOnModule: commit.idParent2Modifications.values()) {
-            //for (ChangeOnModule changeOnModule : changesOnModule.values()) {
-        for (ChangeOnModule changeOnModule : commit.idParent2Modifications.get(commit.idParentMaster).values()) {
-                Module module = changeOnModule.type.equals("DELETE") ? modulesAll.get(changeOnModule.pathOld) : modulesAll.get(changeOnModule.pathNew);
-                Set<String> paths = module.changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
-                for (String path : paths) {
-                    List<Bug> bugs = bugsAll.identifyBug(path);
-                    for (Bug bug : bugs) {
-                        for (BugAtomic bugAtomic : bug.bugAtomics) {
-                            for (String idCommitInduce : bugAtomic.idsCommitInduce) {
-                                int dateFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                                int dateUntil = commitsAll.get(revisionMethod_Until).date;
-                                if(
-                                        idCommitInduce.equals(commit.id)
-                                        & dateFix < dateUntil
-                                ) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        //}
-		return false;
-	}
-
-	public  void calcLogCoupNum(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String revisionMethod_Until) {
-		for(Commit commit : commitsInInterval){
-			if(isCommitChangeModuleHasBeenBuggy(commit, commitsAll, modulesAll, bugsAll, revisionMethod_Until)){
-				this.logCoupNum++;
-			}
-		}
-	}
-
-	private boolean isCommitChangeModuleHasBeenBuggy(Commit commit, Commits commitsAll, Modules modulesAll, Bugs bugsAll, String revisionMethod_Until) {
-//        for(ChangesOnModule changesOnModule: commit.idParent2Modifications.values()) {
-//            for (ChangeOnModule changeOnModule : changesOnModule.values()){
-        for (ChangeOnModule changeOnModule : commit.idParent2Modifications.get(commit.idParentMaster).values()) {
-            System.out.println(changeOnModule.idCommit);
-                Module module = changeOnModule.type.equals("DELETE") ? modulesAll.get(changeOnModule.pathOld) : modulesAll.get(changeOnModule.pathNew);
-                Set<String> paths = module.changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
-                for (String path : paths) {
-                    System.out.println(path);
-                    List<Bug> bugs = bugsAll.identifyBug(path);
-                    for (Bug bug : bugs) {
-                        for (BugAtomic bugAtomic : bug.bugAtomics) {
-                            int dateTarget = commit.date;
-                            int dateFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                            int dateUntil = commitsAll.get(revisionMethod_Until).date;
-                            if (
-                                    dateFix < dateTarget
-                            & dateFix<dateUntil
-                            ) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-//      }
-		return false;
-	}
-
- */
 
 	public void calcPeriod(Commits commitsAll ,String commitFrom, String commitTarget) {
 		int periodFrom = Integer.MAX_VALUE;

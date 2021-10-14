@@ -21,7 +21,23 @@ import org.eclipse.jdt.core.dom.TryStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
 
 public class VisitorExecStmt extends ASTVisitor {
-	List<String> statements = Arrays.asList("AssertStatement","BreakStatement","ConstructorInvocation","ContinueStatement","DoStatement","EnhancedForStatement", "ExpressionStatement","ForStatement","IfStatement","ReturnStatement","SuperConstructorInvocation","SwitchStatement","ThrowStatement","TryStatement","WhileStatement");
+	List<String> statements = Arrays.asList(
+			"AssertStatement",
+			"BreakStatement",
+			"ConstructorInvocation",
+			"ContinueStatement",
+			"DoStatement",
+			"EnhancedForStatement",
+			"ExpressionStatement",
+			"ForStatement",
+			"IfStatement",
+			"ReturnStatement",
+			"SuperConstructorInvocation",
+			"SwitchStatement",
+			"ThrowStatement",
+			"TryStatement",
+			"WhileStatement"
+	);
 	public int execStmt=0;
 
 	public boolean visit(AssertStatement node) {

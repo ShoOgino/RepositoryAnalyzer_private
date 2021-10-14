@@ -1,29 +1,15 @@
-import data.*;
-import misc.ArgBean;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import util.FileUtil;
 
 import java.io.IOException;
 
 public class Main {
-	public static void main(String[] args) throws IOException {
-		//引数処理
-		ArgBean argBean = new ArgBean();
-		CmdLineParser parser = new CmdLineParser(argBean);
-		try {
-			parser.parseArgument(args);
-		} catch (CmdLineException e) {
-			System.out.println("usage:");
-			parser.printSingleLineUsage(System.out);
-		}
-
-		//プロジェクト全体のHistoryを分析
-		Project project = new Project(argBean.pathProject);
-
-		//複数存在するタスクについて、その内容をファイルから読み込む
-		Tasks tasks = new Tasks(project, argBean.pathFileTask, argBean.multiProcess);
-
-		//タスク実行
+	public static void main(String[] args) throws Exception {
+		//${tasks}.jsonをパースして、実行したいタスクを実行。
+		ObjectMapper objectMapper = new ObjectMapper();
+		JsonNode json = objectMapper.readTree(FileUtil.readFile(args[0]));
+		Tasks tasks = objectMapper.readValue(json.toString(), Tasks.class);
 		tasks.execute();
 	}
 }

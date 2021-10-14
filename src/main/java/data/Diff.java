@@ -7,11 +7,11 @@ import java.util.List;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Diff {
-    List<Integer> before;
-    List<Integer> after;
+    List<Integer> linesBefore;
+    List<Integer> linesAfter;
 
     public Diff(){
-        before = new ArrayList<>();
-        after = new ArrayList<>();
+        linesBefore = new ArrayList<>();
+        linesAfter = new ArrayList<>();
     }
 }

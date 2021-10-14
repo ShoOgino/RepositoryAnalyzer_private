@@ -126,10 +126,10 @@ public class CommitsThread  extends Thread{
                 for (Edit changeOriginal : diffFormatter.toFileHeader(diffEntry).toEditList()) {
                     Diff diff = new Diff();
                     for (int i = changeOriginal.getBeginA(); i < changeOriginal.getEndA(); i++) {
-                        diff.before.add(i);
+                        diff.linesBefore.add(i);
                     }
                     for (int i = changeOriginal.getBeginB(); i < changeOriginal.getEndB(); i++) {
-                        diff.after.add(i);
+                        diff.linesAfter.add(i);
                     }
                     changeOnModule.diffs.add(diff);
                 }

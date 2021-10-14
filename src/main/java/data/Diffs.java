@@ -15,7 +15,7 @@ public class Diffs implements List<Diff>{
     public int calcNOAddedLines(){
         int NOAddedLines=0;
         for(Diff diff : diffs){
-            NOAddedLines+= diff.after.size();
+            NOAddedLines+= diff.linesAfter.size();
         }
         return NOAddedLines;
     }
@@ -23,7 +23,7 @@ public class Diffs implements List<Diff>{
     public int calcNODeletedLines(){
         int NODeletedLines=0;
         for(Diff diff : diffs){
-            NODeletedLines+= diff.before.size();
+            NODeletedLines+= diff.linesBefore.size();
         }
         return NODeletedLines;
     }

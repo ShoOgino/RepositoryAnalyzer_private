@@ -181,5 +181,4 @@ public class Commits implements Map<String, Commit> {
     public int hashCode() {
         return commits.hashCode();
     }
-
 }

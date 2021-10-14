@@ -104,7 +104,26 @@ public class VisitorFanIn extends ASTVisitor {
         if(iMethodBinding!=null) {
             String pathMethod = "";
             File file = new File(pathFile);
-            String regex = "(?<=repositoryFile\\d/).+|(?<=repositoryFile\\d\\d/).+|(?<=repositoryFile\\d\\d\\d/).+";
+            String regex = "(?<=repositoryFile.{1}/).+" +
+                    "|(?<=repositoryFile.{2}/).+" +
+                    "|(?<=repositoryFile.{3}/).+" +
+                    "|(?<=repositoryFile.{4}/).+" +
+                    "|(?<=repositoryFile.{5}/).+" +
+                    "|(?<=repositoryFile.{6}/).+" +
+                    "|(?<=repositoryFile.{7}/).+" +
+                    "|(?<=repositoryFile.{8}/).+" +
+                    "|(?<=repositoryFile.{9}/).+" +
+                    "|(?<=repositoryFile.{10}/).+" +
+                    "|(?<=repositoryFile.{11}/).+" +
+                    "|(?<=repositoryFile.{12}/).+" +
+                    "|(?<=repositoryFile.{13}/).+" +
+                    "|(?<=repositoryFile.{14}/).+" +
+                    "|(?<=repositoryFile.{15}/).+" +
+                    "|(?<=repositoryFile.{16}/).+" +
+                    "|(?<=repositoryFile.{17}/).+" +
+                    "|(?<=repositoryFile.{18}/).+" +
+                    "|(?<=repositoryFile.{19}/).+" +
+                    "|(?<=repositoryFile.{20}/).+";
             Pattern p = Pattern.compile(regex);
             String parent = file.getParent().replace("\\", "/");
             Matcher m = p.matcher(parent);

@@ -46,17 +46,6 @@ public class Modules implements Map<String, Module> {
         identifyCommitsRoot();
     }
 
-    /*
-    private void giveNumberToModules() {
-        int index = 0;
-        for (Entry<String, Module> entry:modules.entrySet()) {
-            entry.getValue().num=index;
-            index+=1;
-            entry.getValue().numOfModulesAll = modules.size();
-        }
-    }
-     */
-
     public void identifyChangesOnModule(Commits commits) {
         for (Commit commit : ProgressBar.wrap(commits.values(), "identifyChangeOnModules")) {
             for (ChangesOnModule changesOnModule : commit.idParent2Modifications.values()) {
@@ -135,7 +124,7 @@ public class Modules implements Map<String, Module> {
             Module moduleTarget = modules.get(pathModule);
             Queue<ChangeOnModule> modificationsTarget = new ArrayDeque<>(moduleTarget.getChangesOnModule().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
             ChangeOnModule changeOnModuleTarget;
-            while (0 < modificationsTarget.size()) {//親
+            while (0 < modificationsTarget.size()) {//過去方向
                 changeOnModuleTarget = modificationsTarget.poll();
                 for (ChangeOnModule changeOnModule : changeOnModuleTarget.parentsModification.values()) {
                     moduleTarget.changesOnModule.put(changeOnModule.idCommitParent, changeOnModule.idCommit, changeOnModule.pathOld, changeOnModule.pathNew, changeOnModule);
@@ -145,7 +134,7 @@ public class Modules implements Map<String, Module> {
                 }
             }
             modificationsTarget = new ArrayDeque<>(moduleTarget.getChangesOnModule().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
-            while (0 < modificationsTarget.size()) {//子
+            while (0 < modificationsTarget.size()) {//未来方向
                 changeOnModuleTarget = modificationsTarget.poll();
                 for (ChangeOnModule changeOnModule : changeOnModuleTarget.childrenModification.values()) {
                     moduleTarget.changesOnModule.put(changeOnModule.idCommitParent, changeOnModule.idCommit, changeOnModule.pathOld, changeOnModule.pathNew, changeOnModule);
@@ -196,11 +185,6 @@ public class Modules implements Map<String, Module> {
             //Module module = new Module(pathSource);
             Module moduleTarget = modulesAll.get(pathSource).clone();
             if (!pathSource.contains("test")
-                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/formatter/org/eclipse/jdt/internal/formatter/DefaultCodeFormatterOptions#set(Map).mjava")
-                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/compiler/org/eclipse/jdt/internal/compiler/parser/Parser#consumeRule(int).mjava")
-                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/formatter/org/eclipse/jdt/internal/formatter/DefaultCodeFormatterOptions#getMap().mjava")
-                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/model/org/eclipse/jdt/internal/core/util/CodeAttribute#traverse(IBytecodeVisitor).mjava")
-                    & !Objects.equals(pathSource, "org.eclipse.jdt.core/batch/org/eclipse/jdt/internal/compiler/batch/Main#configure(String[]).mjava")
             ){
                 modules.put(pathSource, moduleTarget);
             }
@@ -238,6 +222,7 @@ public class Modules implements Map<String, Module> {
         calculateFanIn(repositoryFile.getDirectory().getParentFile().getAbsolutePath());
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcCodeMetrics")) {
             Module module = modules.get(pathModule);
+            //codemetrics(Re-evaluating Method-Level Bug Prediction)
             module.loadSrcFromRepository(repositoryMethod, revisionMethodTarget);
             module.calcCompilationUnit();
             module.calcFanOut();
@@ -248,11 +233,8 @@ public class Modules implements Map<String, Module> {
             module.calcComplexity();
             module.calcExecStmt();
             module.calcMaxNesting();
-            //fine-grained
-            /*
+            //codeMetrics(Bug Prediction Based on Fine-Grained Module Histories)
             module.calcLOC();
-
-             */
         }
     }
 
@@ -302,6 +284,7 @@ public class Modules implements Map<String, Module> {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcProcessMetrics")) {
             long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
+            //process metrics(Re-evaluating Method-Level Bug Prediction)
             module.calcCommitsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
             module.calcModificationsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
             module.calcModuleHistories();
@@ -319,9 +302,7 @@ public class Modules implements Map<String, Module> {
             module.calcCond();
             module.calcElseAdded();
             module.calcElseDeleted();
-
-            //fine-grained...
-/*
+            //processMetrics(Bug Prediction Based on Fine-Grained Module Histories)
             module.calcAddLOC();
             module.calcDelLOC();
             module.calcDevMinor();
@@ -357,7 +338,6 @@ public class Modules implements Map<String, Module> {
                 System.out.println(pathModule);
                 System.out.println("処理時間：" + (endTimeOverall - startTimeOverall)/(1000) + " s");
             }
- */
         }
     }
 
@@ -430,12 +410,14 @@ public class Modules implements Map<String, Module> {
         for (String path : ProgressBar.wrap(paths, "loadModulesFromFile")) {
             try {
                 String strFile = readFile(path);
+                if(strFile.length()==0){
+                    System.out.println(path);
+                }
                 ObjectMapper mapper = new ObjectMapper();
                 SimpleModule simpleModule = new SimpleModule();
                 simpleModule.addKeyDeserializer(MultiKey.class, new DeserializerModification());
                 mapper.registerModule(simpleModule);
-                Module module = mapper.readValue(strFile, new TypeReference<Module>() {
-                });
+                Module module = mapper.readValue(strFile, new TypeReference<Module>() {});
                 modules.put(module.path, module);
             } catch (IOException e) {
                 e.printStackTrace();

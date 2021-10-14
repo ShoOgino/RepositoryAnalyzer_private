@@ -6,10 +6,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -26,6 +23,9 @@ public class Commit {
 	}
 
 	public void save(String path, String option){
+		File file = new File(path);
+		File dirParent = new File(file.getParent());
+		dirParent.mkdirs();
 		try (FileOutputStream fos = new FileOutputStream(path);
 			 OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
 			 BufferedWriter writer = new BufferedWriter(osw)){

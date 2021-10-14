@@ -62,7 +62,6 @@ public class Bugs implements Map<String, Bug>{
         return bugs.get(key);
     }
 
-
     public List<BugAtomic> identifyAtomicBugs(String path){
         List<BugAtomic> bugAtomicsIdentified =new ArrayList<>();
         for(Bug bug: bugs.values()){
