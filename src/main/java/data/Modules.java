@@ -201,13 +201,13 @@ public class Modules implements Map<String, Module> {
         }
     }
 
-    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, Bugs bugsAll) throws IOException {
+    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) throws IOException {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateCommitGraph")) {
             long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
-            module.calcCommitsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
-            module.calcModificationsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
-            module.calcCommitGraph(commitsAll, modulesAll, revisionMethod_target, bugsAll);
+            module.calcCommitsInInterval(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.calcModificationsInInterval(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.calcCommitGraph(commitsAll, modulesAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
             long endTimeOverall = System.currentTimeMillis();
             if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
                 System.out.println(pathModule);
@@ -234,7 +234,9 @@ public class Modules implements Map<String, Module> {
             module.calcExecStmt();
             module.calcMaxNesting();
             //codeMetrics(Bug Prediction Based on Fine-Grained Module Histories)
+            /*
             module.calcLOC();
+            */
         }
     }
 
@@ -280,13 +282,13 @@ public class Modules implements Map<String, Module> {
         }
     }
 
-    public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, String revisionMethod_Until) {
+    public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcProcessMetrics")) {
             long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
             //process metrics(Re-evaluating Method-Level Bug Prediction)
-            module.calcCommitsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
-            module.calcModificationsInInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
+            module.calcCommitsInInterval(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.calcModificationsInInterval(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
             module.calcModuleHistories();
             module.calcAuthors();
             module.calcStmtAdded();
@@ -302,6 +304,7 @@ public class Modules implements Map<String, Module> {
             module.calcCond();
             module.calcElseAdded();
             module.calcElseDeleted();
+            /*
             //processMetrics(Bug Prediction Based on Fine-Grained Module Histories)
             module.calcAddLOC();
             module.calcDelLOC();
@@ -309,12 +312,12 @@ public class Modules implements Map<String, Module> {
             module.calcDevMajor();
             module.calcOwnership();
             //long startTimeFixChgNum = System.currentTimeMillis();
-            module.calcFixChgNum(commitsAll, bugsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
+            module.calcFixChgNum(commitsAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
             //long endTimeFixChgNum = System.currentTimeMillis();
             //System.out.println("calcFixChgNum：" + (endTimeFixChgNum - startTimeFixChgNum)/(1000) + " s");
 
             //long startTimePastBugNum = System.currentTimeMillis();
-            module.calcPastBugNum(commitsAll, bugsAll, revisionMethod_referHistoryFrom, revisionMethod_target, revisionMethod_Until);
+            module.calcPastBugNum(commitsAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
             //long endTimePastBugNum = System.currentTimeMillis();
             //System.out.println("pastBugNum：" + (endTimePastBugNum - startTimePastBugNum)/(1000) + " s");
 
@@ -328,8 +331,8 @@ public class Modules implements Map<String, Module> {
             //long endTimeLogCoupNum = System.currentTimeMillis();
             //System.out.println("pastLogCoupNum：" + (endTimeLogCoupNum - startTimeLogCoupNum)/(1000) + " s");
 
-            module.calcPeriod(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
-            module.calcAvgInterval(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target);
+            module.calcPeriod(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.calcAvgInterval(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
             module.calcMaxInterval();
             module.calcMinInterval();
 
@@ -338,20 +341,21 @@ public class Modules implements Map<String, Module> {
                 System.out.println(pathModule);
                 System.out.println("処理時間：" + (endTimeOverall - startTimeOverall)/(1000) + " s");
             }
+             */
         }
     }
 
-    public void calculateIsBuggy(Commits commitsAll, String revisionMethod_target, String revisionMethod_referBugReportsUntil, Bugs bugsAll) {
+    public void calculateIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateIsBuggy")) {
             Module module = modules.get(pathModule);
-            module.calcIsBuggy(commitsAll, revisionMethod_target, revisionMethod_referBugReportsUntil, bugsAll);
+            module.calcIsBuggy(commitsAll, revisionMethodTarget, intervalRevisionMethod_referableCalculatingIsBuggy, bugsAll);
         }
     }
 
-    public void calculateHasBeenBuggy(Commits commitsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, Bugs bugsAll) {
+    public void calculateHasBeenBuggy(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateHasBeenBuggy")) {
             Module module = modules.get(pathModule);
-            module.calcHasBeenBuggy(commitsAll, revisionMethod_referHistoryFrom, revisionMethod_target, bugsAll);
+            module.calcHasBeenBuggy(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
         }
     }
 

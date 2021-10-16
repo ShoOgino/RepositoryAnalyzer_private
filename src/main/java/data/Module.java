@@ -56,35 +56,35 @@ public class Module implements Cloneable {
     public ArrayList<String> commitsHead = null;
     public ArrayList<String> commitsRoot = null;
     @CsvField(pos = 2) int isBuggy = 0;
+    @CsvField(pos = 3) int hasBeenBuggy = 0;
     //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
-    @CsvField(pos = 3) int fanIn = 0;
-    @CsvField(pos = 4) int fanOut = 0;
-    @CsvField(pos = 5) int parameters = 0;
-    @CsvField(pos = 6) int localVar = 0;
-    @CsvField(pos = 7, converterType = DoubleConverter.class) double commentRatio = 0;
-    @CsvField(pos = 8) long countPath = 0;
-    @CsvField(pos = 9) int complexity = 0;
-    @CsvField(pos = 10) int execStmt = 0;
-    @CsvField(pos = 11) int maxNesting = 0;
+    @CsvField(pos = 4) int fanIn = 0;
+    @CsvField(pos = 5) int fanOut = 0;
+    @CsvField(pos = 6) int parameters = 0;
+    @CsvField(pos = 7) int localVar = 0;
+    @CsvField(pos = 8, converterType = DoubleConverter.class) double commentRatio = 0;
+    @CsvField(pos = 9) long countPath = 0;
+    @CsvField(pos = 10) int complexity = 0;
+    @CsvField(pos = 11) int execStmt = 0;
+    @CsvField(pos = 12) int maxNesting = 0;
     //process metrics(Bug Prediction Based on Fine-Grained Module Histories)
-    @CsvField(pos = 12) int moduleHistories = 0;
-    @CsvField(pos = 13) int authors = 0;
-    @CsvField(pos = 14) int stmtAdded = 0;
-    @CsvField(pos = 15) int maxStmtAdded = 0;
-    @CsvField(pos = 16, converterType = DoubleConverter.class) double avgStmtAdded = 0;
-    @CsvField(pos = 17) int stmtDeleted = 0;
-    @CsvField(pos = 18) int maxStmtDeleted = 0;
-    @CsvField(pos = 19, converterType = DoubleConverter.class) double avgStmtDeleted = 0;
-    @CsvField(pos = 20) int churn = 0;
-    @CsvField(pos = 21) int maxChurn = 0;
-    @CsvField(pos = 22, converterType = DoubleConverter.class) double avgChurn = 0;
-    @CsvField(pos = 23) int decl = 0;
-    @CsvField(pos = 24) int cond = 0;
-    @CsvField(pos = 25) int elseAdded = 0;
-    @CsvField(pos = 26) int elseDeleted = 0;
+    @CsvField(pos = 13) int moduleHistories = 0;
+    @CsvField(pos = 14) int authors = 0;
+    @CsvField(pos = 15) int stmtAdded = 0;
+    @CsvField(pos = 16) int maxStmtAdded = 0;
+    @CsvField(pos = 17, converterType = DoubleConverter.class) double avgStmtAdded = 0;
+    @CsvField(pos = 18) int stmtDeleted = 0;
+    @CsvField(pos = 19) int maxStmtDeleted = 0;
+    @CsvField(pos = 20, converterType = DoubleConverter.class) double avgStmtDeleted = 0;
+    @CsvField(pos = 21) int churn = 0;
+    @CsvField(pos = 22) int maxChurn = 0;
+    @CsvField(pos = 23, converterType = DoubleConverter.class) double avgChurn = 0;
+    @CsvField(pos = 24) int decl = 0;
+    @CsvField(pos = 25) int cond = 0;
+    @CsvField(pos = 26) int elseAdded = 0;
+    @CsvField(pos = 27) int elseDeleted = 0;
     //codeMetrics(Re-evaluating Method-Level Bug Prediction)
-    @CsvField(pos = 27) int hasBeenBuggy = 0;
-    int LOC = 0;
+    @CsvField(pos = 27) int LOC = 0;
     //processMetrics(Re-evaluating Method-Level Bug Prediction)
     @CsvField(pos = 28) int addLOC = 0;
     @CsvField(pos = 29) int delLOC = 0;
@@ -450,7 +450,7 @@ public class Module implements Cloneable {
 		}
 	}
 
-	public void calcFixChgNum(Commits commitsAll, Bugs bugsAll, String commitFrom, String commitTarget) {
+	public void calcFixChgNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         Set<String> paths = new HashSet<>();
         for(ChangeOnModule changeOnModule: changesOnModuleInInterval){
             if(!Objects.equals(changeOnModule.pathNew, "/dev/null"))paths.add(changeOnModule.pathNew);
@@ -460,9 +460,9 @@ public class Module implements Cloneable {
         for(String path: paths) {
             List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
             for (BugAtomic bugAtomic : bugAtomics) {
-                int dateBegin = commitsAll.get(commitFrom).date;
+                int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
                 int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                int dateEnd = commitsAll.get(commitTarget).date;
+                int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
                 if (dateBegin < dateCommitFix & dateCommitFix < dateEnd) {
                     commitsFixingBugs.add(bugAtomic.idCommitFix);
                 }
@@ -471,7 +471,7 @@ public class Module implements Cloneable {
         this.fixChgNum = commitsFixingBugs.size();
     }
 
-	public void calcPastBugNum(Commits commitsAll, Bugs bugsAll, String commitFrom, String commitTarget, String commitUntil) {
+	public void calcPastBugNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         Set<String> paths = new HashSet<>();
         for(ChangeOnModule changeOnModule: changesOnModuleInInterval){
             if(!Objects.equals(changeOnModule.pathNew, "/dev/null"))paths.add(changeOnModule.pathNew);
@@ -483,7 +483,7 @@ public class Module implements Cloneable {
                 for (BugAtomic bugAtomic : bug.bugAtomics) {
                     if(Objects.equals(bugAtomic.path, path)){
                         int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                        int dateTarget = commitsAll.get(commitTarget).date;
+                        int dateTarget = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
                         if (dateCommitFix < dateTarget) {
                             this.pastBugNum++;
                             break;
@@ -519,9 +519,9 @@ public class Module implements Cloneable {
         }
     }
 
-	public void calcPeriod(Commits commitsAll ,String commitFrom, String commitTarget) {
+	public void calcPeriod(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
 		int periodFrom = Integer.MAX_VALUE;
-		int periodTo = commitsAll.get(commitTarget).date;
+		int periodTo = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
 		for (ChangeOnModule changeOnModule : changesOnModule.values()) {
 			if (changeOnModule.date < periodFrom) {
 				periodFrom = changeOnModule.date;
@@ -530,7 +530,7 @@ public class Module implements Cloneable {
 		this.period = (periodTo - periodFrom) / (60 * 60 * 24);
 	}
 
-	public void calcAvgInterval(Commits commitsAll ,String commitFrom, String commitTarget) {
+	public void calcAvgInterval(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         int sumInterval = 0;
         List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
         if (commitsSorted.size() <= 1) {
@@ -575,12 +575,12 @@ public class Module implements Cloneable {
 		this.minInterval = minInterval / (60 * 60 * 24 * 7);
 	}
 
-    public void calcCommitsInInterval(Commits commitsAll, String revisionMethod_referHistoryFrom, String revisionMethodTarget) {
+    public void calcCommitsInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         List<Commit> commits = new ArrayList<Commit>();
 
-        Commit commit_referHistoryFrom = commitsAll.get(revisionMethod_referHistoryFrom);
+        Commit commit_referHistoryFrom = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]);
         int dateBegin = commit_referHistoryFrom.date;
-        Commit commitTarget = commitsAll.get(revisionMethodTarget);
+        Commit commitTarget = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
         int dateEnd = commitTarget.date;
         for (ChangeOnModule changeOnModule : changesOnModule.values()) {
             Commit commit = commitsAll.get(changeOnModule.idCommit);
@@ -591,11 +591,11 @@ public class Module implements Cloneable {
         this.commitsInInterval = commits;
     }
 
-    public void calcModificationsInInterval(Commits commitsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target) {
+    public void calcModificationsInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         List<ChangeOnModule> modificationsResult = new ArrayList<>();
 
-        int dateBegin = commitsAll.get(revisionMethod_referHistoryFrom).date;
-        int dateEnd = commitsAll.get(revisionMethod_target).date;
+        int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
+        int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
         for (ChangeOnModule changeOnModule : changesOnModule.values()) {
             Commit commit = commitsAll.get(changeOnModule.idCommit);
             if (dateBegin <= commit.date & commit.date <= dateEnd) {
@@ -605,13 +605,13 @@ public class Module implements Cloneable {
         this.changesOnModuleInInterval = modificationsResult;
     }
 
-    public void calcIsBuggy(Commits commitsAll, String revisionMethod_target, String revisionMethod_referBugReportsUntil, Bugs bugsAll) {
+    public void calcIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
         for (String oneOfPath : calcPaths()) {
             List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(oneOfPath);
             for (BugAtomic bugAtomic : bugAtomics) {
                 Commit commitFix = commitsAll.get(bugAtomic.idCommitFix);
-                Commit commitTimePoint = commitsAll.get(revisionMethod_target);
-                Commit commitLastBugFix = commitsAll.get(revisionMethod_referBugReportsUntil);
+                Commit commitTimePoint = commitsAll.get(revisionMethodTarget);
+                Commit commitLastBugFix = commitsAll.get(intervalRevisionMethod_referableCalculatingIsBuggy[1]);
                 for (String idCommit : bugAtomic.idsCommitInduce) {
                     Commit commitInduce = commitsAll.get(idCommit);
                     if (commitInduce.date < commitTimePoint.date & commitTimePoint.date < commitFix.date & commitFix.date < commitLastBugFix.date)
@@ -629,13 +629,13 @@ public class Module implements Cloneable {
         return paths;
     }
 
-    public void calcHasBeenBuggy(Commits commitsAll, String revisionMethod_referHistoryFrom, String revisionMethod_target, Bugs bugsAll) {
+    public void calcHasBeenBuggy(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
         List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
         if (bugAtomics == null) return;
         for (BugAtomic bugAtomic : bugAtomics) {
-            Commit commitFrom =  commitsAll.get(revisionMethod_referHistoryFrom);
+            Commit commitFrom =  commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]);
             Commit commitFix = commitsAll.get(bugAtomic.idCommitFix);
-            Commit commitTimePoint = commitsAll.get(revisionMethod_target);
+            Commit commitTimePoint = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
             if (commitFrom.date<commitFix.date &  commitFix.date < commitTimePoint.date) {
                 this.hasBeenBuggy = 1;
             }
@@ -801,13 +801,13 @@ public class Module implements Cloneable {
         return children;
     }
 
-    public void calcCommitGraph(Commits commitsAll, Modules modulesAll, String revisionMethod_target, Bugs bugs) throws IOException {
+    public void calcCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugs) throws IOException {
         Set<String> types = new HashSet<>();
         Map<String, Integer> id2Num = new HashMap<>();
         this.commitGraph = new ArrayList<>();
         this.changesOnModuleInInterval = this.changesOnModuleInInterval.stream().sorted(Comparator.comparingInt(ChangeOnModule::getDate).reversed()).collect(Collectors.toList());
-        List<ChangeOnModule> changeOnModulesHead = identifyChangeOnModuleHead(commitsAll, revisionMethod_target);
-        List<ChangeOnModule> changeOnModulesTarget = identifyChangeOnModuleHead(commitsAll, revisionMethod_target);
+        List<ChangeOnModule> changeOnModulesHead = identifyChangeOnModuleHead(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
+        List<ChangeOnModule> changeOnModulesTarget = identifyChangeOnModuleHead(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
         for (ChangeOnModule changeOnModule : this.changesOnModuleInInterval) {
             if (checkIfTheChangeIs(changeOnModulesTarget, changeOnModule)) {
                 changeOnModulesTarget.add(changeOnModule);
@@ -1181,7 +1181,7 @@ public class Module implements Cloneable {
 
             commitGraph.add(nodeCommit4Experiment);
         }
-        Commit commitHead = commitsAll.get(revisionMethod_target);
+        Commit commitHead = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
         NodeCommit4Experiment nodeCommit4ExperimentHead = new NodeCommit4Experiment();
         nodeCommit4ExperimentHead.num = 0;
         nodeCommit4ExperimentHead.interval = (commitHead.date - changeOnModulesTarget.get(0).date) / (60 * 60 * 24);

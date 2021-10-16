@@ -20,14 +20,14 @@ public class Task implements Callable<String> {
     private String pathRepositoryFileOriginal;
     private String pathRepositoryFileCopy;
     private Repository repositoryFile;
-    @JsonProperty("revisionFile_referHistoryFromTheRevision") private String revisionFile_referHistoryFromTheRevision;
-    @JsonProperty("revisionFile_referHistoryUntilTheRevision") private String revisionFile_referHistoryUntilTheRevision;
-    @JsonProperty("revisionFile_referBugReportUntilTheRevision") private String revisionFile_referBugReportUntilTheRevision;
+    @JsonProperty("revisionTargetFile") private  String revisionFileTarget;
+    @JsonProperty("intervalRevisionFile_referableCalculatingProcessMetrics") private String[] intervalRevisionFile_referableCalculatingProcessMetrics = new String[2];
+    @JsonProperty("intervalRevisionFile_referableCalculatingIsBuggy") private String[] intervalRevisionFile_referableCalculatingIsBuggy = new String[2];
     private String pathRepositoryMethod;
     private Repository repositoryMethod;
-    @JsonProperty("revisionMethod_referHistoryFromTheRevision") private String revisionMethod_referHistoryFromTheRevision;
-    @JsonProperty("revisionMethod_referHistoryUntilTheRevision") private String revisionMethod_referHistoryUntilTheRevision;
-    @JsonProperty("revisionMethod_referBugReportUntilTheRevision") private String revisionMethod_referBugReportUntilTheRevision;
+    @JsonProperty("revisionTargetMethod") private  String revisionMethodTarget;
+    @JsonProperty("intervalRevisionMethod_referableCalculatingProcessMetrics") private String[] intervalRevisionMethod_referableCalculatingProcessMetrics = new String[2];
+    @JsonProperty("intervalRevisionMethod_referableCalculatingIsBuggy") private String[] intervalRevisionMethod_referableCalculatingIsBuggy = new String[2];
     private String pathOutput;
     private Commits commitsAll = new Commits();
     private Modules modulesAll = new Modules();
@@ -40,7 +40,7 @@ public class Task implements Callable<String> {
     }
 
     @Override
-    public String  call() throws Exception {
+    public String  call() {
         System.out.println(name);
         try {
             // copy repositoryFile to process tasks in parallel. (we have to checkout a revision in repositoryFile and keep it while processing a task.)
@@ -80,26 +80,26 @@ public class Task implements Callable<String> {
                     | product.contains("hasBeenBuggy")
                     | product.contains("isBuggy")) {
                 Modules modulesTarget = new Modules();
-                modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethod_referHistoryUntilTheRevision);
+                modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethodTarget);
 
                 // calculate products on the target modules
                 if (product.contains("commitGraph")){
-                    modulesTarget.calculateCommitGraph(commitsAll, modulesAll, revisionMethod_referHistoryFromTheRevision, revisionMethod_referHistoryUntilTheRevision, bugsAll);
+                    modulesTarget.calculateCommitGraph(commitsAll, modulesAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
                 }
                 if (product.contains("metrics")) {
-                    modulesTarget.calculateProcessMetrics(commitsAll, modulesAll, bugsAll, revisionMethod_referHistoryFromTheRevision, revisionMethod_referHistoryUntilTheRevision, revisionMethod_referBugReportUntilTheRevision);
-                    modulesTarget.calculateCodeMetrics(repositoryFile, revisionFile_referHistoryUntilTheRevision, repositoryMethod, revisionMethod_referHistoryUntilTheRevision);
+                    modulesTarget.calculateProcessMetrics(commitsAll, modulesAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+                    modulesTarget.calculateCodeMetrics(repositoryFile, revisionFileTarget, repositoryMethod, revisionMethodTarget);
                 }
                 if (product.contains("tokens")){
                 }
                 if (product.contains("AST")) {
-                    modulesTarget.calculateAST(repositoryMethod, revisionMethod_referHistoryUntilTheRevision);
+                    modulesTarget.calculateAST(repositoryMethod, revisionMethodTarget);
                 }
                 if(product.contains("isBuggy")){
-                    modulesTarget.calculateIsBuggy(commitsAll, revisionMethod_referHistoryUntilTheRevision, revisionMethod_referBugReportUntilTheRevision, bugsAll);
+                    modulesTarget.calculateIsBuggy(commitsAll, revisionMethodTarget, intervalRevisionMethod_referableCalculatingIsBuggy, bugsAll);
                 }
                 if(product.contains("hasBeenBuggy")){
-                    modulesTarget.calculateHasBeenBuggy(commitsAll, revisionMethod_referHistoryFromTheRevision, revisionMethod_referHistoryUntilTheRevision, bugsAll);
+                    modulesTarget.calculateHasBeenBuggy(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
                 }
 
                 // save data
