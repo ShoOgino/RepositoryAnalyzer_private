@@ -84,22 +84,34 @@ public class Module implements Cloneable {
     @CsvField(pos = 26) int elseAdded = 0;
     @CsvField(pos = 27) int elseDeleted = 0;
     //codeMetrics(Re-evaluating Method-Level Bug Prediction)
-    @CsvField(pos = 27) int LOC = 0;
+    @CsvField(pos = 28) int LOC = 0;
     //processMetrics(Re-evaluating Method-Level Bug Prediction)
-    @CsvField(pos = 28) int addLOC = 0;
-    @CsvField(pos = 29) int delLOC = 0;
-    @CsvField(pos = 30) int devMinor = 0;
-    @CsvField(pos = 31) int devMajor = 0;
-    @CsvField(pos = 32) double ownership = 0;
-    @CsvField(pos = 33) int fixChgNum = 0;
-    @CsvField(pos = 34) int pastBugNum = 0;
-    @CsvField(pos = 35) int bugIntroNum = 0;
-    @CsvField(pos = 36) int logCoupNum = 0;
-    @CsvField(pos = 37) int period = 0;
-    @CsvField(pos = 38) double avgInterval = 0;
-    @CsvField(pos = 39) int maxInterval = 0;
-    @CsvField(pos = 40) int minInterval = 0;
+    @CsvField(pos = 29) int addLOC = 0;
+    @CsvField(pos = 30) int delLOC = 0;
+    @CsvField(pos = 31) int devMinor = 0;
+    @CsvField(pos = 32) int devMajor = 0;
+    @CsvField(pos = 33) double ownership = 0;
+    @CsvField(pos = 34) int fixChgNum = 0;
+    @CsvField(pos = 35) int pastBugNum = 0;
+    @CsvField(pos = 36) int bugIntroNum = 0;
+    @CsvField(pos = 37) int logCoupNum = 0;
+    @CsvField(pos = 38) int period = 0;
+    @CsvField(pos = 39) double avgInterval = 0;
+    @CsvField(pos = 40) int maxInterval = 0;
+    @CsvField(pos = 41) int minInterval = 0;
 
+    public Module() {
+        this.path = new String();
+        this.changesOnModule = new ChangesOnModule();
+        this.commitsHead = new ArrayList<>();
+        this.commitsRoot = new ArrayList<>();
+    }
+    public Module(String path) {
+        this.path = path;
+        this.changesOnModule = new ChangesOnModule();
+        this.commitsHead = new ArrayList<>();
+        this.commitsRoot = new ArrayList<>();
+    }
     public Module clone() {
         Module module = null;
         try {
@@ -115,49 +127,22 @@ public class Module implements Cloneable {
         }
         return module;
     }
-
-    public Module() {
-        this.path = new String();
-        this.changesOnModule = new ChangesOnModule();
-        this.commitsHead = new ArrayList<>();
-        this.commitsRoot = new ArrayList<>();
+    //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
+    public void calcFanOut() {
+        VisitorFanout visitor = new VisitorFanout();
+        compilationUnit.accept(visitor);
+        this.fanOut = visitor.fanout;
     }
-
-    public Module(String path) {
-        this.path = path;
-        this.changesOnModule = new ChangesOnModule();
-        this.commitsHead = new ArrayList<>();
-        this.commitsRoot = new ArrayList<>();
+    public void calcParameters() {
+        data.VisitorMethodDeclaration visitorMethodDeclaration = new data.VisitorMethodDeclaration();
+        compilationUnit.accept(visitorMethodDeclaration);
+        parameters = visitorMethodDeclaration.parameters;
     }
-
-    public void calcMaxNesting() {
-        VisitorMaxNesting visitorMaxNesting = new VisitorMaxNesting();
-        compilationUnit.accept(visitorMaxNesting);
-        maxNesting = visitorMaxNesting.maxNesting;
+    public void calcLocalVar() {
+        VisitorLocalVar visitorLocalVar = new VisitorLocalVar();
+        compilationUnit.accept(visitorLocalVar);
+        localVar = visitorLocalVar.NOVariables;
     }
-
-    public void calcExecStmt() {
-        VisitorExecStmt visitorExecStmt = new VisitorExecStmt();
-        compilationUnit.accept(visitorExecStmt);
-        execStmt = visitorExecStmt.execStmt;
-    }
-
-    public void calcComplexity() {
-        VisitorComplexity visitorComplexity = new VisitorComplexity();
-        compilationUnit.accept(visitorComplexity);
-        complexity = visitorComplexity.complexity;
-    }
-
-    public void calcCountPath() {
-        VisitorCountPath visitorCountPath = new VisitorCountPath();
-        compilationUnit.accept(visitorCountPath);
-        long countPath = 1;
-        for (int branch : visitorCountPath.branches) {
-            countPath *= branch;
-        }
-        this.countPath = countPath;
-    }
-
     public void calcCommentRatio() {
         String regex = "\n|\r\n";
         String[] linesMethod = this.source.split(regex, 0);
@@ -186,37 +171,166 @@ public class Module implements Cloneable {
         }
         commentRatio = (float) countLineComment / (float) countLineCode;
     }
-
-    public void calcLocalVar() {
-        VisitorLocalVar visitorLocalVar = new VisitorLocalVar();
-        compilationUnit.accept(visitorLocalVar);
-        localVar = visitorLocalVar.NOVariables;
+    public void calcCountPath() {
+        VisitorCountPath visitorCountPath = new VisitorCountPath();
+        compilationUnit.accept(visitorCountPath);
+        long countPath = 1;
+        for (int branch : visitorCountPath.branches) {
+            countPath *= branch;
+        }
+        this.countPath = countPath;
     }
-
-    public void calcParameters() {
-        data.VisitorMethodDeclaration visitorMethodDeclaration = new data.VisitorMethodDeclaration();
-        compilationUnit.accept(visitorMethodDeclaration);
-        parameters = visitorMethodDeclaration.parameters;
+    public void calcComplexity() {
+        VisitorComplexity visitorComplexity = new VisitorComplexity();
+        compilationUnit.accept(visitorComplexity);
+        complexity = visitorComplexity.complexity;
     }
-
-    public void calcFanOut() {
-        VisitorFanout visitor = new VisitorFanout();
-        compilationUnit.accept(visitor);
-        this.fanOut = visitor.fanout;
+    public void calcExecStmt() {
+        VisitorExecStmt visitorExecStmt = new VisitorExecStmt();
+        compilationUnit.accept(visitorExecStmt);
+        execStmt = visitorExecStmt.execStmt;
     }
-
-    public void calcCond() {
-        int cond = 0;
+    public void calcMaxNesting() {
+        VisitorMaxNesting visitorMaxNesting = new VisitorMaxNesting();
+        compilationUnit.accept(visitorMaxNesting);
+        maxNesting = visitorMaxNesting.maxNesting;
+    }
+    //process metrics(Bug Prediction Based on Fine-Grained Module Histories)
+    public void calcModuleHistories() {
+        int moduleHistories = commitsInInterval.size();
+        this.moduleHistories = moduleHistories;
+    }
+    public void calcAuthors() {
+        Set<String> setAuthors = new HashSet<>();
+        commitsInInterval.stream().forEach(item -> setAuthors.add(item.author));
+        this.authors = setAuthors.size();
+    }
+    public void calcStmtAdded() {
+        int stmtAdded = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAdded++;
+            }
+        }
+        this.stmtAdded = stmtAdded;
+    }
+    public void calcMaxStmtAdded() {
+        int maxStmtAdded = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            int stmtAddedTemp = 0;
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAddedTemp++;
+            }
+            if (maxStmtAdded < stmtAddedTemp) {
+                maxStmtAdded = stmtAddedTemp;
+            }
+        }
+        this.maxStmtAdded = maxStmtAdded;
+    }
+    public void calcAvgStmtAdded() {
+        int avgStmtAdded = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) avgStmtAdded++;
+            }
+        }
+        calcModuleHistories();
+        if (moduleHistories == 0) this.avgStmtAdded = 0;
+        else this.avgStmtAdded = avgStmtAdded / (double) moduleHistories;
+    }
+    public void calcStmtDeleted() {
+        int stmtDeleted = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeleted++;
+            }
+        }
+        this.stmtDeleted = stmtDeleted;
+    }
+    public void calcMaxStmtDeleted() {
+        int maxStmtDeleted = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            int stmtDeletedOnCommit = 0;
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeletedOnCommit++;
+            }
+            if (maxStmtDeleted < stmtDeletedOnCommit) {
+                maxStmtDeleted = stmtDeletedOnCommit;
+            }
+        }
+        this.maxStmtDeleted = maxStmtDeleted;
+    }
+    public void calcAvgStmtDeleted() {
+        int avgStmtDeleted = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) avgStmtDeleted++;
+            }
+        }
+        calcModuleHistories();
+        if (moduleHistories == 0) this.avgStmtDeleted = 0;
+        else this.avgStmtDeleted = avgStmtDeleted / (double) moduleHistories;
+    }
+    public void calcChurn() {
+        int churn = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churn++;
+                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churn--;
+            }
+        }
+        this.churn = churn;
+    }
+    public void calcMaxChurn() {
+        int maxChurn = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            int churnTemp = 0;
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churnTemp++;
+                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churnTemp--;
+            }
+            if (maxChurn < churnTemp) maxChurn = churnTemp;
+        }
+        this.maxChurn = maxChurn;
+    }
+    public void calcAvgChurn() {
+        calcChurn();
+        calcModuleHistories();
+        if (moduleHistories == 0) this.avgChurn = 0;
+        else this.avgChurn = churn / (float) moduleHistories;
+    }
+    public void calcElseAdded() {
+        int elseAdded = 0;
         for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
             List<SourceCodeChange> changes = identifyChanges(changeOnModule);
             for (SourceCodeChange change : changes) {
                 EntityType et = change.getChangedEntity().getType();
-                if (change.getChangeType() == ChangeType.CONDITION_EXPRESSION_CHANGE) cond++;
+                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_INSERT & et.toString().equals("ELSE_STATEMENT"))
+                    elseAdded++;
             }
         }
-        this.cond = cond;
+        this.elseAdded = elseAdded;
     }
-
+    public void calcElseDeleted() {
+        int elseDeleted = 0;
+        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
+            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
+            for (SourceCodeChange change : changes) {
+                EntityType et = change.getChangedEntity().getType();
+                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_DELETE & et.toString().equals("ELSE_STATEMENT"))
+                    elseDeleted++;
+            }
+        }
+        this.elseDeleted = elseDeleted;
+    }
     public void calcDecl() {
         int decl = 0;
         List<ChangeType> ctdecl = Arrays.asList(
@@ -240,159 +354,22 @@ public class Module implements Cloneable {
         }
         this.decl = decl;
     }
-
-    public void calcAvgChurn() {
-        calcChurn();
-        calcModuleHistories();
-        if (moduleHistories == 0) this.avgChurn = 0;
-        else this.avgChurn = churn / (float) moduleHistories;
-    }
-
-    public void calcMaxChurn() {
-        int maxChurn = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            int churnTemp = 0;
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churnTemp++;
-                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churnTemp--;
-            }
-            if (maxChurn < churnTemp) maxChurn = churnTemp;
-        }
-        this.maxChurn = maxChurn;
-    }
-
-    public void calcChurn() {
-        int churn = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churn++;
-                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churn--;
-            }
-        }
-        this.churn = churn;
-    }
-
-    public void calcAvgStmtDeleted() {
-        int avgStmtDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) avgStmtDeleted++;
-            }
-        }
-        calcModuleHistories();
-        if (moduleHistories == 0) this.avgStmtDeleted = 0;
-        else this.avgStmtDeleted = avgStmtDeleted / (double) moduleHistories;
-    }
-
-    public void calcMaxStmtDeleted() {
-        int maxStmtDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            int stmtDeletedOnCommit = 0;
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeletedOnCommit++;
-            }
-            if (maxStmtDeleted < stmtDeletedOnCommit) {
-                maxStmtDeleted = stmtDeletedOnCommit;
-            }
-        }
-        this.maxStmtDeleted = maxStmtDeleted;
-    }
-
-    public void calcStmtDeleted() {
-        int stmtDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeleted++;
-            }
-        }
-        this.stmtDeleted = stmtDeleted;
-    }
-
-    public void calcAvgStmtAdded() {
-        int avgStmtAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) avgStmtAdded++;
-            }
-        }
-        calcModuleHistories();
-        if (moduleHistories == 0) this.avgStmtAdded = 0;
-        else this.avgStmtAdded = avgStmtAdded / (double) moduleHistories;
-    }
-
-    public void calcMaxStmtAdded() {
-        int maxStmtAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            int stmtAddedTemp = 0;
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAddedTemp++;
-            }
-            if (maxStmtAdded < stmtAddedTemp) {
-                maxStmtAdded = stmtAddedTemp;
-            }
-        }
-        this.maxStmtAdded = maxStmtAdded;
-    }
-
-    public void calcStmtAdded() {
-        int stmtAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAdded++;
-            }
-        }
-        this.stmtAdded = stmtAdded;
-    }
-
-    public void calcElseDeleted() {
-        int elseDeleted = 0;
+    public void calcCond() {
+        int cond = 0;
         for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
             List<SourceCodeChange> changes = identifyChanges(changeOnModule);
             for (SourceCodeChange change : changes) {
                 EntityType et = change.getChangedEntity().getType();
-                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_DELETE & et.toString().equals("ELSE_STATEMENT"))
-                    elseDeleted++;
+                if (change.getChangeType() == ChangeType.CONDITION_EXPRESSION_CHANGE) cond++;
             }
         }
-        this.elseDeleted = elseDeleted;
+        this.cond = cond;
     }
-
-    public void calcElseAdded() {
-        int elseAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                EntityType et = change.getChangedEntity().getType();
-                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_INSERT & et.toString().equals("ELSE_STATEMENT"))
-                    elseAdded++;
-            }
-        }
-        this.elseAdded = elseAdded;
-    }
-
-    public void calcAuthors() {
-        Set<String> setAuthors = new HashSet<>();
-        commitsInInterval.stream().forEach(item -> setAuthors.add(item.author));
-        this.authors = setAuthors.size();
-    }
-
-    public void calcModuleHistories() {
-        int moduleHistories = commitsInInterval.size();
-        this.moduleHistories = moduleHistories;
-    }
-
+    //codeMetrics(Re-evaluating Method-Level Bug Prediction)
 	public void calcLOC() {
 		this.LOC = source.split("\n").length;
 	}
-
+    //processMetrics(Re-evaluating Method-Level Bug Prediction)
 	public void calcAddLOC() {
 		int addLOC = 0;
 		for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
@@ -400,7 +377,6 @@ public class Module implements Cloneable {
 		}
 		this.addLOC = addLOC;
 	}
-
 	public void calcDelLOC() {
 		int delLOC = 0;
 		for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
@@ -408,7 +384,6 @@ public class Module implements Cloneable {
 		}
 		this.delLOC = delLOC;
 	}
-
 	public void calcDevMinor() {
 		Set<String> setAuthors = new HashSet<>();
 		changesOnModuleInInterval.forEach(item -> setAuthors.add(item.author));
@@ -422,7 +397,6 @@ public class Module implements Cloneable {
 		}
 		this.devMinor = devMinor;
 	}
-
 	public void calcDevMajor() {
 		Set<String> setAuthors = new HashSet<>();
 		changesOnModuleInInterval.forEach(item -> setAuthors.add(item.author));
@@ -436,7 +410,6 @@ public class Module implements Cloneable {
 		}
 		this.devMajor = devMajor;
 	}
-
 	public void calcOwnership() {
 		Set<String> setAuthors = new HashSet<>();
 		changesOnModuleInInterval.forEach(item -> setAuthors.add(item.author));
@@ -449,7 +422,6 @@ public class Module implements Cloneable {
 			}
 		}
 	}
-
 	public void calcFixChgNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         Set<String> paths = new HashSet<>();
         for(ChangeOnModule changeOnModule: changesOnModuleInInterval){
@@ -470,7 +442,6 @@ public class Module implements Cloneable {
         }
         this.fixChgNum = commitsFixingBugs.size();
     }
-
 	public void calcPastBugNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         Set<String> paths = new HashSet<>();
         for(ChangeOnModule changeOnModule: changesOnModuleInInterval){
@@ -493,8 +464,6 @@ public class Module implements Cloneable {
             }
         }
 	}
-
-
     public void calcBugIntroNum() {
         Set<String> pathsPast = changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
         for(Commit commit : commitsInInterval) {
@@ -506,7 +475,6 @@ public class Module implements Cloneable {
             }
         }
     }
-
     public void calcLogCoupNum() {
         Set<String> pathsPast = changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
         for(Commit commit : commitsInInterval) {
@@ -518,7 +486,6 @@ public class Module implements Cloneable {
             }
         }
     }
-
 	public void calcPeriod(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
 		int periodFrom = Integer.MAX_VALUE;
 		int periodTo = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
@@ -529,7 +496,6 @@ public class Module implements Cloneable {
 		}
 		this.period = (periodTo - periodFrom) / (60 * 60 * 24);
 	}
-
 	public void calcAvgInterval(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         int sumInterval = 0;
         List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
@@ -542,7 +508,6 @@ public class Module implements Cloneable {
         }
         this.avgInterval = (sumInterval / (float) (commitsSorted.size()-1))/(60 * 60 * 24 * 7);
 	}
-
 	public void calcMaxInterval() {
 		int maxInterval = 0;
 		List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
@@ -558,7 +523,6 @@ public class Module implements Cloneable {
 		}
 		this.maxInterval = maxInterval / (60 * 60 * 24 * 7);
 	}
-
 	public void calcMinInterval() {
 		int minInterval = Integer.MAX_VALUE;
 		List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
@@ -574,7 +538,7 @@ public class Module implements Cloneable {
 		}
 		this.minInterval = minInterval / (60 * 60 * 24 * 7);
 	}
-
+    //others
     public void calcCommitsInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         List<Commit> commits = new ArrayList<Commit>();
 
@@ -590,7 +554,6 @@ public class Module implements Cloneable {
         }
         this.commitsInInterval = commits;
     }
-
     public void calcModificationsInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         List<ChangeOnModule> modificationsResult = new ArrayList<>();
 
@@ -604,9 +567,12 @@ public class Module implements Cloneable {
         }
         this.changesOnModuleInInterval = modificationsResult;
     }
-
     public void calcIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
-        for (String oneOfPath : calcPaths()) {
+        Set<String> pathsPast = new HashSet<>();
+        for (ChangeOnModule changeOnModule : this.changesOnModule.values()) {
+            if (!Objects.equals(changeOnModule.type, "DELETE")) pathsPast.add(changeOnModule.pathNew);
+        }
+        for (String oneOfPath : pathsPast) {
             List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(oneOfPath);
             for (BugAtomic bugAtomic : bugAtomics) {
                 Commit commitFix = commitsAll.get(bugAtomic.idCommitFix);
@@ -620,15 +586,6 @@ public class Module implements Cloneable {
             }
         }
     }
-
-    public Set<String> calcPaths() {
-        Set<String> paths = new HashSet<>();
-        for (ChangeOnModule changeOnModule : this.changesOnModule.values()) {
-            if (!Objects.equals(changeOnModule.type, "DELETE")) paths.add(changeOnModule.pathNew);
-        }
-        return paths;
-    }
-
     public void calcHasBeenBuggy(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
         List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
         if (bugAtomics == null) return;
@@ -641,14 +598,12 @@ public class Module implements Cloneable {
             }
         }
     }
-
     public void calcCompilationUnit() {
         String sourceClass = "public class Dummy{" + this.source + "}";
         ASTParser parser = ASTParser.newParser(AST.JLS14);
         parser.setSource(sourceClass.toCharArray());
         this.compilationUnit = (CompilationUnit) parser.createAST(new NullProgressMonitor());
     }
-
     public void loadSrcFromRepository(Repository repositoryMethod, String idCommit) throws IOException {
         RevCommit revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(idCommit));
         RevTree tree = revCommit.getTree();
@@ -662,7 +617,6 @@ public class Module implements Cloneable {
             }
         }
     }
-
     public List<SourceCodeChange> identifyChanges(ChangeOnModule changeOnModule) {
         String sourcePrev = null;
         String sourceCurrent = null;
@@ -745,9 +699,7 @@ public class Module implements Cloneable {
         }
         return distiller.getSourceCodeChanges();
     }
-
     private int countASTNode = 0;
-
     public void calcAST() {
         NodeAST4Experiment nodeAST4Experiment = new NodeAST4Experiment();
         nodeAST4Experiment.num = countASTNode++;
@@ -761,7 +713,6 @@ public class Module implements Cloneable {
         nodeAST4Experiment.source = compilationUnit.toString();
         calcChildren(compilationUnit, nodeAST4Experiment);
     }
-
     public void calcChildren(ASTNode node, NodeAST4Experiment nodeAST4Experiment) {
         for (ASTNode nodeChild : getChildren(node)) {
             NodeAST4Experiment nodeAST4ExperimentChild = new NodeAST4Experiment();
@@ -783,7 +734,6 @@ public class Module implements Cloneable {
             calcChildren(nodeChild, nodeAST4ExperimentChild);
         }
     }
-
     public List<ASTNode> getChildren(ASTNode node) {
         List<ASTNode> children = new ArrayList<ASTNode>();
         List list = node.structuralPropertiesForType();
@@ -800,7 +750,6 @@ public class Module implements Cloneable {
         }
         return children;
     }
-
     public void calcCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugs) throws IOException {
         Set<String> types = new HashSet<>();
         Map<String, Integer> id2Num = new HashMap<>();
@@ -1191,7 +1140,6 @@ public class Module implements Cloneable {
         }
         this.commitGraph.add(nodeCommit4ExperimentHead);
     }
-
     public boolean checkIfTheChangeIs(List<ChangeOnModule> changeOnModulesTarget, ChangeOnModule changeOnModule) {
         for (ChangeOnModule changeOnModuleChild : changeOnModule.childrenModification.values()) {
             for (ChangeOnModule changeOnModuleTarget : changeOnModulesTarget) {
@@ -1202,7 +1150,6 @@ public class Module implements Cloneable {
         }
         return false;
     }
-
     private List<ChangeOnModule> identifyChangeOnModuleHead(Commits commitsAll, String revisionMethod_target) {
         List<ChangeOnModule> changesOnModulesHead = new ArrayList<>();
         Commit commit = commitsAll.get(revisionMethod_target);

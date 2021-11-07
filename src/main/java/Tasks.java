@@ -51,7 +51,7 @@ public class Tasks {
 
             //算出されたプロジェクト情報を他のタスクに付与する
             for(Task task: tasksOfTheProject){
-                task.inherit(taskToAnalyzeProject);
+                task.inheritDataOnProject(taskToAnalyzeProject);
             }
 
             //優先度が同じグループのタスクをやっていく

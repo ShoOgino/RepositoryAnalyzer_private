@@ -33,7 +33,7 @@ public class Task implements Callable<String> {
     private Modules modulesAll = new Modules();
     private Bugs bugsAll = new Bugs();
 
-    public void inherit(Task task){
+    public void inheritDataOnProject(Task task){
         this.commitsAll = task.commitsAll;
         this.modulesAll = task.modulesAll;
         this.bugsAll = task.bugsAll;
@@ -53,14 +53,14 @@ public class Task implements Callable<String> {
             pathRepositoryMethod = pathProject+"/repositoryMethod";
             repositoryMethod = new FileRepositoryBuilder().setGitDir(new File(pathRepositoryMethod + "/.git")).build();
 
-            String pathCommits = pathProject + "/commits";
             if(product.contains("commit")){
+                String pathCommits = pathProject + "/commits";
                 commitsAll.loadCommitsFromRepository(repositoryMethod, pathCommits);
                 commitsAll.loadCommitsFromFile(pathCommits);
             }
 
-            String pathModules = pathProject + "/modules";
             if(product.contains("module")){
+                String pathModules = pathProject + "/modules";
                 modulesAll.analyzeAllModules(commitsAll);
                 modulesAll.saveAsJson(pathModules);
             }
@@ -68,7 +68,6 @@ public class Task implements Callable<String> {
             if(product.contains("bug")) {
                 String pathBugs = pathProject + "/bugs.json";
                 bugsAll.loadBugsFromFile(pathBugs);
-
                 commitsAll.embedBugInfo(bugsAll, modulesAll);
             }
 
@@ -108,8 +107,6 @@ public class Task implements Callable<String> {
                         product.contains("AST")
                                 | product.contains("commitGraph")
                                 | product.contains("tokens")
-                                | product.contains("hasBeenBuggy")
-                                | product.contains("isBuggy")
                 ) {
                     modulesTarget.saveAsJson(pathOutput);
                 }
