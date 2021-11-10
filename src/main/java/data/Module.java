@@ -503,6 +503,8 @@ public class Module implements Cloneable {
     //others
     //この中で、HEADの特定もする。
     public void identifyCommitsOnModuleTarget(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        String sourcecodeNow = "";
+
         CommitsOnModule commitsOnModuleResult = new CommitsOnModule();
 
         int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
@@ -634,7 +636,7 @@ public class Module implements Cloneable {
             nodeCommit4Experiment.idCommitParent = commitOnModule.idCommitParent;
             //node and edge
             nodeCommit4Experiment.num = id2Num.get(commitOnModule.idCommit + commitOnModule.idCommitParent + commitOnModule.pathOld + commitOnModule.pathNew);
-            for (CommitOnModule commitOnModuleParent : commitOnModule.parentsModification.values()) {
+            for (CommitOnModule commitOnModuleParent : commitOnModule.parents.values()) {
                 nodeCommit4Experiment.parents.add(id2Num.get(commitOnModule.idCommit + commitOnModule.idCommitParent + commitOnModule.pathOld + commitOnModule.pathNew));
             }
             //content
@@ -966,7 +968,7 @@ public class Module implements Cloneable {
 
             //4. interval
             int interval = 0;
-            for (CommitOnModule commitOnModuleParent : commitOnModule.parentsModification.values()) {
+            for (CommitOnModule commitOnModuleParent : commitOnModule.parents.values()) {
                 interval += (commitOnModule.date - commitOnModuleParent.date) / (60 * 60 * 24);
             }
             nodeCommit4Experiment.interval = interval;
@@ -1002,6 +1004,7 @@ public class Module implements Cloneable {
         this.commitGraph.add(nodeCommit4ExperimentHead);
     }
     private List<CommitOnModule> identifyChangeOnModuleHead(Commits commitsAll, String revisionMethod_target) {
+
         List<CommitOnModule> commitOnModulesHead = new ArrayList<>();
         Commit commit = commitsAll.get(revisionMethod_target);
         List<String> idsCommit = changesOnModuleInInterval.values().stream().map(a -> a.idCommit).collect(Collectors.toList());
@@ -1022,7 +1025,7 @@ public class Module implements Cloneable {
         return commitOnModulesHead;
     }
     public boolean checkIfTheChangeIs(List<CommitOnModule> commitOnModulesTarget, CommitOnModule CommitOnModule) {
-        for (CommitOnModule commitOnModuleChild : CommitOnModule.childrenModification.values()) {
+        for (CommitOnModule commitOnModuleChild : CommitOnModule.children.values()) {
             for (CommitOnModule commitOnModuleTarget : commitOnModulesTarget) {
                 if (Objects.equals(commitOnModuleChild.idCommit, commitOnModuleTarget.idCommit)) {
                     return true;

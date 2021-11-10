@@ -19,13 +19,10 @@ public class CommitOnModule {
 	public String sourceOld;
 	public Diffs diffs;
 	public String pathNewParent;
-	@JsonIgnore
-	public CommitsOnModule parentsModification;
-	public List<String> parents;
-	@JsonIgnore
-	public CommitsOnModule childrenModification;
-	public List<String> children;
-
+	@JsonIgnore public CommitsOnModule parents;
+	public List<String> idsCommitParent;
+	@JsonIgnore public CommitsOnModule children;
+	public List<String> idsCommitChild;
 	public CommitOnModule() {
 		this.idCommit= "";
 		this.idCommitParent = "";
@@ -38,25 +35,21 @@ public class CommitOnModule {
 		this.sourceNew= "";
 		this.diffs = new Diffs();
 		this.pathNewParent = "";
-		this.parentsModification = new CommitsOnModule();
-		this.parents = new ArrayList<>();
-		this.childrenModification = new CommitsOnModule();
-		this.children = new ArrayList<>();
+		this.parents = new CommitsOnModule();
+		this.idsCommitParent = new ArrayList<>();
+		this.children = new CommitsOnModule();
+		this.idsCommitChild = new ArrayList<>();
 	}
-
 	public void loadAncestors(CommitsOnModule commitsOnModule){
 		commitsOnModule.put(this.idCommitParent, this.idCommit, this.pathOld, this.pathNew, this);
-		for(CommitOnModule commitOnModule : this.parentsModification.values()) {
+		for(CommitOnModule commitOnModule : this.parents.values()) {
 			if(!commitsOnModule.containsValue(commitOnModule)) commitOnModule.loadAncestors(commitsOnModule);
 		}
 	}
-
 	public int calcNOAddedLines(){
 		return diffs.calcNOAddedLines();
 	}
-
 	public int calcNODeletedLines(){
 		return diffs.calcNODeletedLines();
 	}
-
 }

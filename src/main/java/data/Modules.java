@@ -77,7 +77,7 @@ public class Modules implements Map<String, Module> {
                 moduleTarget.commitsOnModule.put(commitOnModuleTarget.idCommitParent, commitOnModuleTarget.idCommit, commitOnModuleTarget.pathOld, commitOnModuleTarget.pathNew, commitOnModuleTarget);
                 if (commitOnModuleTarget.type.equals("ADD")) {//親が存在しない。
                 } else {//親が存在する。
-                    if (!commitOnModuleTarget.parentsModification.isEmpty()) {//親特定済み
+                    if (!commitOnModuleTarget.parents.isEmpty()) {//親特定済み
                         CommitsOnModule commitsOnModule = new CommitsOnModule();
                         commitOnModuleTarget.loadAncestors(commitsOnModule);
                         for (Entry<MultiKey<? extends String>, CommitOnModule> m : commitsOnModule.entrySet()) {
@@ -97,10 +97,10 @@ public class Modules implements Map<String, Module> {
                             for (CommitsOnModule commitsOnModule : commitNow.idParent2Modifications.values()) {
                                 for (CommitOnModule commitOnModule : commitsOnModule.values()) {
                                     if (Objects.equals(commitOnModuleTarget.pathNewParent, commitOnModule.pathNew)) {
-                                        commitOnModuleTarget.parentsModification.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
-                                        commitOnModuleTarget.parents.add(commitOnModule.idCommit);
-                                        commitOnModule.childrenModification.put(commitOnModuleTarget.idCommitParent, commitOnModuleTarget.idCommit, commitOnModuleTarget.pathOld, commitOnModuleTarget.pathNew, commitOnModuleTarget);
-                                        commitOnModule.children.add(commitOnModuleTarget.idCommit);
+                                        commitOnModuleTarget.parents.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
+                                        commitOnModuleTarget.idsCommitParent.add(commitOnModule.idCommit);
+                                        commitOnModule.children.put(commitOnModuleTarget.idCommitParent, commitOnModuleTarget.idCommit, commitOnModuleTarget.pathOld, commitOnModuleTarget.pathNew, commitOnModuleTarget);
+                                        commitOnModule.idsCommitChild.add(commitOnModuleTarget.idCommit);
                                         modificationsTarget.add(commitOnModule);
                                         isOK = true;
                                     }
@@ -123,7 +123,7 @@ public class Modules implements Map<String, Module> {
             CommitOnModule commitOnModuleTarget;
             while (0 < modificationsTarget.size()) {//過去方向
                 commitOnModuleTarget = modificationsTarget.poll();
-                for (CommitOnModule commitOnModule : commitOnModuleTarget.parentsModification.values()) {
+                for (CommitOnModule commitOnModule : commitOnModuleTarget.parents.values()) {
                     moduleTarget.commitsOnModule.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
                     if (!moduleTarget.commitsOnModule.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
                         modificationsTarget.add(commitOnModule);
@@ -133,7 +133,7 @@ public class Modules implements Map<String, Module> {
             modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModule().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
             while (0 < modificationsTarget.size()) {//未来方向
                 commitOnModuleTarget = modificationsTarget.poll();
-                for (CommitOnModule commitOnModule : commitOnModuleTarget.childrenModification.values()) {
+                for (CommitOnModule commitOnModule : commitOnModuleTarget.children.values()) {
                     moduleTarget.commitsOnModule.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
                     if (!moduleTarget.commitsOnModule.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
                         modificationsTarget.add(commitOnModule);
