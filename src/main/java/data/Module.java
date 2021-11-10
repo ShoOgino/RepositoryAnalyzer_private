@@ -11,7 +11,6 @@ import ch.uzh.ifi.seal.changedistiller.distilling.FileDistiller;
 import ch.uzh.ifi.seal.changedistiller.model.classifiers.ChangeType;
 import ch.uzh.ifi.seal.changedistiller.model.classifiers.EntityType;
 import ch.uzh.ifi.seal.changedistiller.model.entities.SourceCodeChange;
-import ast.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.github.gumtreediff.actions.EditScript;
@@ -26,8 +25,7 @@ import lombok.Data;
 import misc.DoubleConverter;
 import net.sf.jsefa.csv.annotation.CsvDataType;
 import net.sf.jsefa.csv.annotation.CsvField;
-import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.jdt.core.dom.*;
+import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -39,22 +37,12 @@ import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 @CsvDataType()
 @Data
 public class Module implements Cloneable {
-    @JsonIgnore
-    public String id = "";
-    @CsvField(pos = 1)
-    public String path = null;
-    public String source = null;
-    public List<String> tokens = null;
-    @JsonIgnore
-    public CompilationUnit compilationUnit = null;
-    public NodeAST4Experiment ast = null;
+    @JsonIgnore public String id = "";
+    @CsvField(pos = 1) public String path = null;
+    @JsonIgnore public CommitsOnModule commitsOnModule = null;
+    public CommitsOnModule changesOnModuleInInterval = null;
     public List<NodeCommit4Experiment> commitGraph = null;
-    public ChangesOnModule changesOnModule = null;
-    @JsonIgnore
-    public List<Commit> commitsInInterval = null;
-    public List<ChangeOnModule> changesOnModuleInInterval = null;
-    public ArrayList<String> commitsHead = null;
-    public ArrayList<String> commitsRoot = null;
+    @JsonIgnore private Sourcecode sourcecode = null;
     @CsvField(pos = 2) int isBuggy = 0;
     @CsvField(pos = 3) int hasBeenBuggy = 0;
     //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
@@ -100,17 +88,10 @@ public class Module implements Cloneable {
     @CsvField(pos = 40) int maxInterval = 0;
     @CsvField(pos = 41) int minInterval = 0;
 
-    public Module() {
-        this.path = new String();
-        this.changesOnModule = new ChangesOnModule();
-        this.commitsHead = new ArrayList<>();
-        this.commitsRoot = new ArrayList<>();
-    }
+    public Module() { }
     public Module(String path) {
         this.path = path;
-        this.changesOnModule = new ChangesOnModule();
-        this.commitsHead = new ArrayList<>();
-        this.commitsRoot = new ArrayList<>();
+        this.commitsOnModule = new CommitsOnModule();
     }
     public Module clone() {
         Module module = null;
@@ -118,459 +99,17 @@ public class Module implements Cloneable {
             module = (Module) super.clone();
             module.id = this.id;
             module.path = this.path;
-            module.source = this.source;
-            module.changesOnModule = this.changesOnModule;
-            module.commitsHead = this.commitsHead;
-            module.commitsRoot = this.commitsRoot;
+            module.commitsOnModule = this.commitsOnModule;
         } catch (Exception e) {
             module = null;
         }
         return module;
     }
-    //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
-    public void calcFanOut() {
-        VisitorFanout visitor = new VisitorFanout();
-        compilationUnit.accept(visitor);
-        this.fanOut = visitor.fanout;
-    }
-    public void calcParameters() {
-        data.VisitorMethodDeclaration visitorMethodDeclaration = new data.VisitorMethodDeclaration();
-        compilationUnit.accept(visitorMethodDeclaration);
-        parameters = visitorMethodDeclaration.parameters;
-    }
-    public void calcLocalVar() {
-        VisitorLocalVar visitorLocalVar = new VisitorLocalVar();
-        compilationUnit.accept(visitorLocalVar);
-        localVar = visitorLocalVar.NOVariables;
-    }
-    public void calcCommentRatio() {
-        String regex = "\n|\r\n";
-        String[] linesMethod = this.source.split(regex, 0);
-
-        int countLineCode = 0;
-        int countLineComment = 0;
-        boolean inComment = false;
-        for (String line : linesMethod) {
-            countLineCode++;
-            if (line.matches(".*\\*/\\S+")) {
-                inComment = false;
-            } else if (line.matches(".*\\*/\\s*")) {
-                inComment = false;
-                countLineComment++;
-            } else if (inComment) {
-                countLineComment++;
-            } else if (line.matches("\\S+/\\*.*")) {
-                inComment = true;
-            } else if (line.matches("\\s*/\\*.*")) {
-                countLineComment++;
-                inComment = true;
-            } else if (line.matches("\\S+//.*")) {
-            } else if (line.matches("\\s*//.*")) {
-                countLineComment++;
-            }
-        }
-        commentRatio = (float) countLineComment / (float) countLineCode;
-    }
-    public void calcCountPath() {
-        VisitorCountPath visitorCountPath = new VisitorCountPath();
-        compilationUnit.accept(visitorCountPath);
-        long countPath = 1;
-        for (int branch : visitorCountPath.branches) {
-            countPath *= branch;
-        }
-        this.countPath = countPath;
-    }
-    public void calcComplexity() {
-        VisitorComplexity visitorComplexity = new VisitorComplexity();
-        compilationUnit.accept(visitorComplexity);
-        complexity = visitorComplexity.complexity;
-    }
-    public void calcExecStmt() {
-        VisitorExecStmt visitorExecStmt = new VisitorExecStmt();
-        compilationUnit.accept(visitorExecStmt);
-        execStmt = visitorExecStmt.execStmt;
-    }
-    public void calcMaxNesting() {
-        VisitorMaxNesting visitorMaxNesting = new VisitorMaxNesting();
-        compilationUnit.accept(visitorMaxNesting);
-        maxNesting = visitorMaxNesting.maxNesting;
-    }
-    //process metrics(Bug Prediction Based on Fine-Grained Module Histories)
-    public void calcModuleHistories() {
-        int moduleHistories = commitsInInterval.size();
-        this.moduleHistories = moduleHistories;
-    }
-    public void calcAuthors() {
-        Set<String> setAuthors = new HashSet<>();
-        commitsInInterval.stream().forEach(item -> setAuthors.add(item.author));
-        this.authors = setAuthors.size();
-    }
-    public void calcStmtAdded() {
-        int stmtAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAdded++;
-            }
-        }
-        this.stmtAdded = stmtAdded;
-    }
-    public void calcMaxStmtAdded() {
-        int maxStmtAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            int stmtAddedTemp = 0;
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAddedTemp++;
-            }
-            if (maxStmtAdded < stmtAddedTemp) {
-                maxStmtAdded = stmtAddedTemp;
-            }
-        }
-        this.maxStmtAdded = maxStmtAdded;
-    }
-    public void calcAvgStmtAdded() {
-        int avgStmtAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) avgStmtAdded++;
-            }
-        }
-        calcModuleHistories();
-        if (moduleHistories == 0) this.avgStmtAdded = 0;
-        else this.avgStmtAdded = avgStmtAdded / (double) moduleHistories;
-    }
-    public void calcStmtDeleted() {
-        int stmtDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeleted++;
-            }
-        }
-        this.stmtDeleted = stmtDeleted;
-    }
-    public void calcMaxStmtDeleted() {
-        int maxStmtDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            int stmtDeletedOnCommit = 0;
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeletedOnCommit++;
-            }
-            if (maxStmtDeleted < stmtDeletedOnCommit) {
-                maxStmtDeleted = stmtDeletedOnCommit;
-            }
-        }
-        this.maxStmtDeleted = maxStmtDeleted;
-    }
-    public void calcAvgStmtDeleted() {
-        int avgStmtDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) avgStmtDeleted++;
-            }
-        }
-        calcModuleHistories();
-        if (moduleHistories == 0) this.avgStmtDeleted = 0;
-        else this.avgStmtDeleted = avgStmtDeleted / (double) moduleHistories;
-    }
-    public void calcChurn() {
-        int churn = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churn++;
-                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churn--;
-            }
-        }
-        this.churn = churn;
-    }
-    public void calcMaxChurn() {
-        int maxChurn = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            int churnTemp = 0;
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churnTemp++;
-                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churnTemp--;
-            }
-            if (maxChurn < churnTemp) maxChurn = churnTemp;
-        }
-        this.maxChurn = maxChurn;
-    }
-    public void calcAvgChurn() {
-        calcChurn();
-        calcModuleHistories();
-        if (moduleHistories == 0) this.avgChurn = 0;
-        else this.avgChurn = churn / (float) moduleHistories;
-    }
-    public void calcElseAdded() {
-        int elseAdded = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                EntityType et = change.getChangedEntity().getType();
-                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_INSERT & et.toString().equals("ELSE_STATEMENT"))
-                    elseAdded++;
-            }
-        }
-        this.elseAdded = elseAdded;
-    }
-    public void calcElseDeleted() {
-        int elseDeleted = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                EntityType et = change.getChangedEntity().getType();
-                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_DELETE & et.toString().equals("ELSE_STATEMENT"))
-                    elseDeleted++;
-            }
-        }
-        this.elseDeleted = elseDeleted;
-    }
-    public void calcDecl() {
-        int decl = 0;
-        List<ChangeType> ctdecl = Arrays.asList(
-                ChangeType.METHOD_RENAMING,
-                ChangeType.PARAMETER_DELETE,
-                ChangeType.PARAMETER_INSERT,
-                ChangeType.PARAMETER_ORDERING_CHANGE,
-                ChangeType.PARAMETER_RENAMING,
-                ChangeType.PARAMETER_TYPE_CHANGE,
-                ChangeType.RETURN_TYPE_INSERT,
-                ChangeType.RETURN_TYPE_DELETE,
-                ChangeType.RETURN_TYPE_CHANGE,
-                ChangeType.PARAMETER_TYPE_CHANGE
-        );
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                EntityType et = change.getChangedEntity().getType();
-                if (ctdecl.contains(change.getChangeType())) decl++;
-            }
-        }
-        this.decl = decl;
-    }
-    public void calcCond() {
-        int cond = 0;
-        for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-            List<SourceCodeChange> changes = identifyChanges(changeOnModule);
-            for (SourceCodeChange change : changes) {
-                EntityType et = change.getChangedEntity().getType();
-                if (change.getChangeType() == ChangeType.CONDITION_EXPRESSION_CHANGE) cond++;
-            }
-        }
-        this.cond = cond;
-    }
-    //codeMetrics(Re-evaluating Method-Level Bug Prediction)
-	public void calcLOC() {
-		this.LOC = source.split("\n").length;
-	}
-    //processMetrics(Re-evaluating Method-Level Bug Prediction)
-	public void calcAddLOC() {
-		int addLOC = 0;
-		for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-			addLOC += changeOnModule.calcNOAddedLines();
-		}
-		this.addLOC = addLOC;
-	}
-	public void calcDelLOC() {
-		int delLOC = 0;
-		for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-			delLOC += changeOnModule.calcNODeletedLines();
-		}
-		this.delLOC = delLOC;
-	}
-	public void calcDevMinor() {
-		Set<String> setAuthors = new HashSet<>();
-		changesOnModuleInInterval.forEach(item -> setAuthors.add(item.author));
-
-		int devMinor = 0;
-		for (String nameAuthor : setAuthors) {
-			int count = (int) changesOnModuleInInterval.stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
-			if ( ( count / (float) changesOnModuleInInterval.size() ) < 0.2) {
-				devMinor++;
-			}
-		}
-		this.devMinor = devMinor;
-	}
-	public void calcDevMajor() {
-		Set<String> setAuthors = new HashSet<>();
-		changesOnModuleInInterval.forEach(item -> setAuthors.add(item.author));
-
-		int devMajor = 0;
-		for (String nameAuthor : setAuthors) {
-			int count = (int) changesOnModuleInInterval.stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
-			if (0.2 < count / (float) changesOnModuleInInterval.size()) {
-				devMajor++;
-			}
-		}
-		this.devMajor = devMajor;
-	}
-	public void calcOwnership() {
-		Set<String> setAuthors = new HashSet<>();
-		changesOnModuleInInterval.forEach(item -> setAuthors.add(item.author));
-
-		for (String nameAuthor : setAuthors) {
-			int count = (int) changesOnModuleInInterval.stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
-			double ownership = count / (float) changesOnModuleInInterval.size();
-			if (this.ownership < ownership) {
-				this.ownership = ownership;
-			}
-		}
-	}
-	public void calcFixChgNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        Set<String> paths = new HashSet<>();
-        for(ChangeOnModule changeOnModule: changesOnModuleInInterval){
-            if(!Objects.equals(changeOnModule.pathNew, "/dev/null"))paths.add(changeOnModule.pathNew);
-            if(!Objects.equals(changeOnModule.pathOld, "/dev/null"))paths.add(changeOnModule.pathOld);
-        }
-        Set<String> commitsFixingBugs = new HashSet<>();
-        for(String path: paths) {
-            List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
-            for (BugAtomic bugAtomic : bugAtomics) {
-                int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
-                int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-                if (dateBegin < dateCommitFix & dateCommitFix < dateEnd) {
-                    commitsFixingBugs.add(bugAtomic.idCommitFix);
-                }
-            }
-        }
-        this.fixChgNum = commitsFixingBugs.size();
-    }
-	public void calcPastBugNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        Set<String> paths = new HashSet<>();
-        for(ChangeOnModule changeOnModule: changesOnModuleInInterval){
-            if(!Objects.equals(changeOnModule.pathNew, "/dev/null"))paths.add(changeOnModule.pathNew);
-            if(!Objects.equals(changeOnModule.pathOld, "/dev/null"))paths.add(changeOnModule.pathOld);
-        }
-        for(String path: paths) {
-            List<Bug> bugs = bugsAll.identifyBug(path);
-            for (Bug bug : bugs) {
-                for (BugAtomic bugAtomic : bug.bugAtomics) {
-                    if(Objects.equals(bugAtomic.path, path)){
-                        int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                        int dateTarget = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-                        if (dateCommitFix < dateTarget) {
-                            this.pastBugNum++;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-	}
-    public void calcBugIntroNum() {
-        Set<String> pathsPast = changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
-        for(Commit commit : commitsInInterval) {
-            for(String pathBugIntroduced :commit.pathsBugIntroduced){
-                if(!pathsPast.contains(pathBugIntroduced)){
-                    this.bugIntroNum += 1;
-                    break;
-                }
-            }
-        }
-    }
-    public void calcLogCoupNum() {
-        Set<String> pathsPast = changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
-        for(Commit commit : commitsInInterval) {
-            for(String pathHasBeenBuggy :commit.pathsHasBeenBuggy){
-                if(!pathsPast.contains(pathHasBeenBuggy)){
-                    this.logCoupNum += 1;
-                    break;
-                }
-            }
-        }
-    }
-	public void calcPeriod(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-		int periodFrom = Integer.MAX_VALUE;
-		int periodTo = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-		for (ChangeOnModule changeOnModule : changesOnModule.values()) {
-			if (changeOnModule.date < periodFrom) {
-				periodFrom = changeOnModule.date;
-			}
-		}
-		this.period = (periodTo - periodFrom) / (60 * 60 * 24);
-	}
-	public void calcAvgInterval(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        int sumInterval = 0;
-        List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
-        if (commitsSorted.size() <= 1) {
-            this.avgInterval = 0;
-            return;
-        }
-        for (int i = 0; i < commitsSorted.size() - 1; i++) {
-            sumInterval += commitsSorted.get(i + 1).date - commitsSorted.get(i).date;
-        }
-        this.avgInterval = (sumInterval / (float) (commitsSorted.size()-1))/(60 * 60 * 24 * 7);
-	}
-	public void calcMaxInterval() {
-		int maxInterval = 0;
-		List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
-		if (commitsSorted.size() < 2) {
-			this.maxInterval = 0;
-			return;
-		}
-		for (int i = 0; i < commitsSorted.size() - 1; i++) {
-			int interval = commitsSorted.get(i + 1).date - commitsSorted.get(i).date;
-			if (maxInterval < interval) {
-				maxInterval = interval;
-			}
-		}
-		this.maxInterval = maxInterval / (60 * 60 * 24 * 7);
-	}
-	public void calcMinInterval() {
-		int minInterval = Integer.MAX_VALUE;
-		List<Commit> commitsSorted = commitsInInterval.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
-		if (commitsSorted.size() < 2) {
-			this.minInterval = 0;
-			return;
-		}
-		for (int i = 0; i < commitsSorted.size() - 1; i++) {
-			int interval = commitsSorted.get(i + 1).date - commitsSorted.get(i).date;
-			if (interval < minInterval) {
-				minInterval = interval;
-			}
-		}
-		this.minInterval = minInterval / (60 * 60 * 24 * 7);
-	}
-    //others
-    public void calcCommitsInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        List<Commit> commits = new ArrayList<Commit>();
-
-        Commit commit_referHistoryFrom = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]);
-        int dateBegin = commit_referHistoryFrom.date;
-        Commit commitTarget = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
-        int dateEnd = commitTarget.date;
-        for (ChangeOnModule changeOnModule : changesOnModule.values()) {
-            Commit commit = commitsAll.get(changeOnModule.idCommit);
-            if (dateBegin <= commit.date & commit.date <= dateEnd) {
-                commits.add(commit);
-            }
-        }
-        this.commitsInInterval = commits;
-    }
-    public void calcModificationsInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        List<ChangeOnModule> modificationsResult = new ArrayList<>();
-
-        int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
-        int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-        for (ChangeOnModule changeOnModule : changesOnModule.values()) {
-            Commit commit = commitsAll.get(changeOnModule.idCommit);
-            if (dateBegin <= commit.date & commit.date <= dateEnd) {
-                modificationsResult.add(changeOnModule);
-            }
-        }
-        this.changesOnModuleInInterval = modificationsResult;
-    }
+    //metrics
     public void calcIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
         Set<String> pathsPast = new HashSet<>();
-        for (ChangeOnModule changeOnModule : this.changesOnModule.values()) {
-            if (!Objects.equals(changeOnModule.type, "DELETE")) pathsPast.add(changeOnModule.pathNew);
+        for (CommitOnModule CommitOnModule : this.commitsOnModule.values()) {
+            if (!Objects.equals(CommitOnModule.type, "DELETE")) pathsPast.add(CommitOnModule.pathNew);
         }
         for (String oneOfPath : pathsPast) {
             List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(oneOfPath);
@@ -598,13 +137,386 @@ public class Module implements Cloneable {
             }
         }
     }
-    public void calcCompilationUnit() {
-        String sourceClass = "public class Dummy{" + this.source + "}";
-        ASTParser parser = ASTParser.newParser(AST.JLS14);
-        parser.setSource(sourceClass.toCharArray());
-        this.compilationUnit = (CompilationUnit) parser.createAST(new NullProgressMonitor());
+    //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
+    public void calcFanOut(){
+        this.fanOut = sourcecode.calcFanOut();
     }
-    public void loadSrcFromRepository(Repository repositoryMethod, String idCommit) throws IOException {
+    public void calcParameters(){
+        this.parameters = sourcecode.calcParameters();
+    }
+    public void calcLocalVar(){
+        this.localVar = sourcecode.calcLocalVar();
+    }
+    public void calcCommentRatio(){ this.commentRatio = sourcecode.calcCommentRatio();}
+    public void calcCountPath(){ this.countPath = sourcecode.calcCountPath();}
+    public void calcComplexity(){ this.complexity = sourcecode.calcComplexity();}
+    public void calcExecStmt(){ this.execStmt = sourcecode.calcExecStmt();}
+    public void calcMaxNesting(){ this.maxNesting = sourcecode.calcMaxNesting();}
+    //process metrics(Bug Prediction Based on Fine-Grained Module Histories)
+    public void calcModuleHistories() {
+        int moduleHistories = changesOnModuleInInterval.size();
+        this.moduleHistories = moduleHistories;
+    }
+    public void calcAuthors() {
+        Set<String> setAuthors = new HashSet<>();
+        changesOnModuleInInterval.values().forEach(item -> setAuthors.add(item.author));
+        this.authors = setAuthors.size();
+    }
+    public void calcStmtAdded() {
+        int stmtAdded = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAdded++;
+            }
+        }
+        this.stmtAdded = stmtAdded;
+    }
+    public void calcMaxStmtAdded() {
+        int maxStmtAdded = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            int stmtAddedTemp = 0;
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) stmtAddedTemp++;
+            }
+            if (maxStmtAdded < stmtAddedTemp) {
+                maxStmtAdded = stmtAddedTemp;
+            }
+        }
+        this.maxStmtAdded = maxStmtAdded;
+    }
+    public void calcAvgStmtAdded() {
+        int avgStmtAdded = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) avgStmtAdded++;
+            }
+        }
+        calcModuleHistories();
+        if (moduleHistories == 0) this.avgStmtAdded = 0;
+        else this.avgStmtAdded = avgStmtAdded / (double) moduleHistories;
+    }
+    public void calcStmtDeleted() {
+        int stmtDeleted = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeleted++;
+            }
+        }
+        this.stmtDeleted = stmtDeleted;
+    }
+    public void calcMaxStmtDeleted() {
+        int maxStmtDeleted = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            int stmtDeletedOnCommit = 0;
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) stmtDeletedOnCommit++;
+            }
+            if (maxStmtDeleted < stmtDeletedOnCommit) {
+                maxStmtDeleted = stmtDeletedOnCommit;
+            }
+        }
+        this.maxStmtDeleted = maxStmtDeleted;
+    }
+    public void calcAvgStmtDeleted() {
+        int avgStmtDeleted = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_DELETE) avgStmtDeleted++;
+            }
+        }
+        calcModuleHistories();
+        if (moduleHistories == 0) this.avgStmtDeleted = 0;
+        else this.avgStmtDeleted = avgStmtDeleted / (double) moduleHistories;
+    }
+    public void calcChurn() {
+        int churn = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churn++;
+                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churn--;
+            }
+        }
+        this.churn = churn;
+    }
+    public void calcMaxChurn() {
+        int maxChurn = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            int churnTemp = 0;
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                if (change.getChangeType() == ChangeType.STATEMENT_INSERT) churnTemp++;
+                else if (change.getChangeType() == ChangeType.STATEMENT_DELETE) churnTemp--;
+            }
+            if (maxChurn < churnTemp) maxChurn = churnTemp;
+        }
+        this.maxChurn = maxChurn;
+    }
+    public void calcAvgChurn() {
+        calcChurn();
+        calcModuleHistories();
+        if (moduleHistories == 0) this.avgChurn = 0;
+        else this.avgChurn = churn / (float) moduleHistories;
+    }
+    public void calcElseAdded() {
+        int elseAdded = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                EntityType et = change.getChangedEntity().getType();
+                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_INSERT & et.toString().equals("ELSE_STATEMENT"))
+                    elseAdded++;
+            }
+        }
+        this.elseAdded = elseAdded;
+    }
+    public void calcElseDeleted() {
+        int elseDeleted = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                EntityType et = change.getChangedEntity().getType();
+                if (change.getChangeType() == ChangeType.ALTERNATIVE_PART_DELETE & et.toString().equals("ELSE_STATEMENT"))
+                    elseDeleted++;
+            }
+        }
+        this.elseDeleted = elseDeleted;
+    }
+    public void calcDecl() {
+        int decl = 0;
+        List<ChangeType> ctdecl = Arrays.asList(
+                ChangeType.METHOD_RENAMING,
+                ChangeType.PARAMETER_DELETE,
+                ChangeType.PARAMETER_INSERT,
+                ChangeType.PARAMETER_ORDERING_CHANGE,
+                ChangeType.PARAMETER_RENAMING,
+                ChangeType.PARAMETER_TYPE_CHANGE,
+                ChangeType.RETURN_TYPE_INSERT,
+                ChangeType.RETURN_TYPE_DELETE,
+                ChangeType.RETURN_TYPE_CHANGE,
+                ChangeType.PARAMETER_TYPE_CHANGE
+        );
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                EntityType et = change.getChangedEntity().getType();
+                if (ctdecl.contains(change.getChangeType())) decl++;
+            }
+        }
+        this.decl = decl;
+    }
+    public void calcCond() {
+        int cond = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            List<SourceCodeChange> changes = identifySourceCodeChange(CommitOnModule);
+            for (SourceCodeChange change : changes) {
+                EntityType et = change.getChangedEntity().getType();
+                if (change.getChangeType() == ChangeType.CONDITION_EXPRESSION_CHANGE) cond++;
+            }
+        }
+        this.cond = cond;
+    }
+    //codeMetrics(Re-evaluating Method-Level Bug Prediction)
+    public void calcLOC() {
+        this.LOC = sourcecode.calcLOC();
+    }
+    //processMetrics(Re-evaluating Method-Level Bug Prediction)
+    public void calcAddLOC() {
+        int addLOC = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            addLOC += CommitOnModule.calcNOAddedLines();
+        }
+        this.addLOC = addLOC;
+    }
+    public void calcDelLOC() {
+        int delLOC = 0;
+        for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            delLOC += CommitOnModule.calcNODeletedLines();
+        }
+        this.delLOC = delLOC;
+    }
+    public void calcDevMinor() {
+        Set<String> setAuthors = new HashSet<>();
+        changesOnModuleInInterval.values().forEach(item -> setAuthors.add(item.author));
+
+        int devMinor = 0;
+        for (String nameAuthor : setAuthors) {
+            int count = (int) changesOnModuleInInterval.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
+            if ( ( count / (float) changesOnModuleInInterval.size() ) < 0.2) {
+                devMinor++;
+            }
+        }
+        this.devMinor = devMinor;
+    }
+    public void calcDevMajor() {
+        Set<String> setAuthors = new HashSet<>();
+        changesOnModuleInInterval.values().forEach(item -> setAuthors.add(item.author));
+
+        int devMajor = 0;
+        for (String nameAuthor : setAuthors) {
+            int count = (int) changesOnModuleInInterval.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
+            if (0.2 < count / (float) changesOnModuleInInterval.size()) {
+                devMajor++;
+            }
+        }
+        this.devMajor = devMajor;
+    }
+    public void calcOwnership() {
+        Set<String> setAuthors = new HashSet<>();
+        changesOnModuleInInterval.values().forEach(item -> setAuthors.add(item.author));
+
+        for (String nameAuthor : setAuthors) {
+            int count = (int) changesOnModuleInInterval.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
+            double ownership = count / (float) changesOnModuleInInterval.size();
+            if (this.ownership < ownership) {
+                this.ownership = ownership;
+            }
+        }
+    }
+    public void calcFixChgNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        Set<String> paths = new HashSet<>();
+        for(CommitOnModule CommitOnModule : changesOnModuleInInterval.values()){
+            if(!Objects.equals(CommitOnModule.pathNew, "/dev/null"))paths.add(CommitOnModule.pathNew);
+            if(!Objects.equals(CommitOnModule.pathOld, "/dev/null"))paths.add(CommitOnModule.pathOld);
+        }
+        Set<String> commitsFixingBugs = new HashSet<>();
+        for(String path: paths) {
+            List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
+            for (BugAtomic bugAtomic : bugAtomics) {
+                int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
+                int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
+                int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
+                if (dateBegin < dateCommitFix & dateCommitFix < dateEnd) {
+                    commitsFixingBugs.add(bugAtomic.idCommitFix);
+                }
+            }
+        }
+        this.fixChgNum = commitsFixingBugs.size();
+    }
+    public void calcPastBugNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        Set<String> paths = new HashSet<>();
+        for(CommitOnModule CommitOnModule : changesOnModuleInInterval.values()){
+            if(!Objects.equals(CommitOnModule.pathNew, "/dev/null"))paths.add(CommitOnModule.pathNew);
+            if(!Objects.equals(CommitOnModule.pathOld, "/dev/null"))paths.add(CommitOnModule.pathOld);
+        }
+        for(String path: paths) {
+            List<Bug> bugs = bugsAll.identifyBug(path);
+            for (Bug bug : bugs) {
+                for (BugAtomic bugAtomic : bug.bugAtomics) {
+                    if(Objects.equals(bugAtomic.path, path)){
+                        int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
+                        int dateTarget = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
+                        if (dateCommitFix < dateTarget) {
+                            this.pastBugNum++;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    //todo
+    public void calcBugIntroNum() {
+        Set<String> pathsPast = commitsOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
+        for(CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+            /*
+            for(String pathBugIntroduced :.pathsBugIntroduced){
+                if(!pathsPast.contains(pathBugIntroduced)){
+                    this.bugIntroNum += 1;
+                    break;
+                }
+            }
+             */
+        }
+    }
+    /*todo
+    public void calcLogCoupNum() {
+        Set<String> pathsPast = changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
+        for(ChangeOnModule changeOnModule: changesOnModuleInInterval) {
+            for(String pathHasBeenBuggy :.pathsHasBeenBuggy){
+                if(!pathsPast.contains(pathHasBeenBuggy)){
+                    this.logCoupNum += 1;
+                    break;
+                }
+            }
+        }
+    }
+     */
+    public void calcPeriod(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        int periodFrom = Integer.MAX_VALUE;
+        int periodTo = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
+        for (CommitOnModule CommitOnModule : commitsOnModule.values()) {
+            if (CommitOnModule.date < periodFrom) {
+                periodFrom = CommitOnModule.date;
+            }
+        }
+        this.period = (periodTo - periodFrom) / (60 * 60 * 24);
+    }
+    public void calcAvgInterval(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        int sumInterval = 0;
+        List<CommitOnModule> commitOnModulesSorted = changesOnModuleInInterval.values().stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
+        if (commitOnModulesSorted.size() <= 1) {
+            this.avgInterval = 0;
+            return;
+        }
+        for (int i = 0; i < commitOnModulesSorted.size() - 1; i++) {
+            sumInterval += commitOnModulesSorted.get(i + 1).date - commitOnModulesSorted.get(i).date;
+        }
+        this.avgInterval = (sumInterval / (float) (commitOnModulesSorted.size()-1))/(60 * 60 * 24 * 7);
+    }
+    public void calcMaxInterval() {
+        int maxInterval = 0;
+        List<CommitOnModule> commitOnModules = changesOnModuleInInterval.values().stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
+        if (commitOnModules.size() < 2) {
+            this.maxInterval = 0;
+            return;
+        }
+        for (int i = 0; i < commitOnModules.size() - 1; i++) {
+            int interval = commitOnModules.get(i + 1).date - commitOnModules.get(i).date;
+            if (maxInterval < interval) {
+                maxInterval = interval;
+            }
+        }
+        this.maxInterval = maxInterval / (60 * 60 * 24 * 7);
+    }
+    public void calcMinInterval() {
+        int minInterval = Integer.MAX_VALUE;
+        List<CommitOnModule> commitOnModules = changesOnModuleInInterval.values().stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
+        if (commitOnModules.size() < 2) {
+            this.minInterval = 0;
+            return;
+        }
+        for (int i = 0; i < commitOnModules.size() - 1; i++) {
+            int interval = commitOnModules.get(i + 1).date - commitOnModules.get(i).date;
+            if (interval < minInterval) {
+                minInterval = interval;
+            }
+        }
+        this.minInterval = minInterval / (60 * 60 * 24 * 7);
+    }
+    //others
+    //この中で、HEADの特定もする。
+    public void identifyCommitsOnModuleTarget(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        CommitsOnModule commitsOnModuleResult = new CommitsOnModule();
+
+        int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
+        int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
+        for (Map.Entry<MultiKey<? extends String>, CommitOnModule> entry : commitsOnModule.entrySet()) {
+            Commit commit = commitsAll.get(entry.getValue().idCommit);
+            if (dateBegin <= commit.date & commit.date <= dateEnd) {
+                commitsOnModuleResult.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        this.changesOnModuleInInterval = commitsOnModuleResult;
+    }
+    public void identifySourcecodeTarget(Repository repositoryMethod, String idCommit) throws IOException {
         RevCommit revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(idCommit));
         RevTree tree = revCommit.getTree();
         try (TreeWalk treeWalk = new TreeWalk(repositoryMethod)) {
@@ -613,18 +525,18 @@ public class Module implements Cloneable {
             treeWalk.setFilter(PathSuffixFilter.create(path));
             while (treeWalk.next()) {
                 ObjectLoader loader = repositoryMethod.open(treeWalk.getObjectId(0));
-                this.source = new String(loader.getBytes());
+                this.sourcecode = new Sourcecode(new String(loader.getBytes()));
             }
         }
     }
-    public List<SourceCodeChange> identifyChanges(ChangeOnModule changeOnModule) {
+    public List<SourceCodeChange> identifySourceCodeChange(CommitOnModule CommitOnModule) {
         String sourcePrev = null;
         String sourceCurrent = null;
         String strPre = null;
         String strPost = null;
-        if (changeOnModule.sourceOld.equals("")) {
+        if (CommitOnModule.sourceOld.equals("")) {
             String regex = "\\n|\\r\\n";
-            String tmp = changeOnModule.sourceNew;
+            String tmp = CommitOnModule.sourceNew;
             String[] lines = tmp.split(regex, 0);
 
             boolean inComment = false;
@@ -688,8 +600,8 @@ public class Module implements Cloneable {
                     strPost +
                     "}";
         } else {
-            sourcePrev = "public class Dummy{" + changeOnModule.sourceOld + "}";
-            sourceCurrent = "public class Dummy{" + changeOnModule.sourceNew + "}";
+            sourcePrev = "public class Dummy{" + CommitOnModule.sourceOld + "}";
+            sourceCurrent = "public class Dummy{" + CommitOnModule.sourceNew + "}";
         }
 
         FileDistiller distiller = ChangeDistiller.createFileDistiller(ChangeDistiller.Language.JAVA);
@@ -699,88 +611,37 @@ public class Module implements Cloneable {
         }
         return distiller.getSourceCodeChanges();
     }
-    private int countASTNode = 0;
-    public void calcAST() {
-        NodeAST4Experiment nodeAST4Experiment = new NodeAST4Experiment();
-        nodeAST4Experiment.num = countASTNode++;
-        nodeAST4Experiment.numType = compilationUnit.getNodeType();
-        String nameClass = compilationUnit.getClass().toString();
-        if (0 < nameClass.split("\\.").length) {
-            nodeAST4Experiment.nameType = nameClass.split("\\.")[nameClass.split("\\.").length - 1];
-        } else {
-            nodeAST4Experiment.nameType = nameClass;
-        }
-        nodeAST4Experiment.source = compilationUnit.toString();
-        calcChildren(compilationUnit, nodeAST4Experiment);
-    }
-    public void calcChildren(ASTNode node, NodeAST4Experiment nodeAST4Experiment) {
-        for (ASTNode nodeChild : getChildren(node)) {
-            NodeAST4Experiment nodeAST4ExperimentChild = new NodeAST4Experiment();
-            if (nodeChild.getNodeType() == 31) {
-                countASTNode = 0;
-                this.ast = nodeAST4ExperimentChild;
-            }
-            nodeAST4ExperimentChild.num = countASTNode++;
-            nodeAST4ExperimentChild.numType = nodeChild.getNodeType();
-            String nameClass = nodeChild.getClass().toString();
-            if (0 < nameClass.split("\\.").length) {
-                nodeAST4ExperimentChild.nameType = nameClass.split("\\.")[nameClass.split("\\.").length - 1];
-            } else {
-                nodeAST4ExperimentChild.nameType = nameClass;
-            }
-            nodeAST4ExperimentChild.source = nodeChild.toString();
-            nodeAST4ExperimentChild.parent = nodeAST4Experiment;
-            nodeAST4Experiment.children.add(nodeAST4ExperimentChild);
-            calcChildren(nodeChild, nodeAST4ExperimentChild);
-        }
-    }
-    public List<ASTNode> getChildren(ASTNode node) {
-        List<ASTNode> children = new ArrayList<ASTNode>();
-        List list = node.structuralPropertiesForType();
-
-        for (int i = 0; i < list.size(); i++) {
-            Object child = node.getStructuralProperty((StructuralPropertyDescriptor) list.get(i));
-            if (child instanceof ASTNode) {
-                children.add((ASTNode) child);
-            } else if (child instanceof List) {
-                for (Object object : (List) child) {
-                    children.add((ASTNode) object);
-                }
-            }
-        }
-        return children;
-    }
     public void calcCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugs) throws IOException {
         Set<String> types = new HashSet<>();
         Map<String, Integer> id2Num = new HashMap<>();
         this.commitGraph = new ArrayList<>();
-        this.changesOnModuleInInterval = this.changesOnModuleInInterval.stream().sorted(Comparator.comparingInt(ChangeOnModule::getDate).reversed()).collect(Collectors.toList());
-        List<ChangeOnModule> changeOnModulesHead = identifyChangeOnModuleHead(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
-        List<ChangeOnModule> changeOnModulesTarget = identifyChangeOnModuleHead(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
-        for (ChangeOnModule changeOnModule : this.changesOnModuleInInterval) {
-            if (checkIfTheChangeIs(changeOnModulesTarget, changeOnModule)) {
-                changeOnModulesTarget.add(changeOnModule);
+        //this.changesOnModuleInInterval = this.changesOnModuleInInterval.stream().sorted(Comparator.comparingInt(CommitOnModule::getDate).reversed()).collect(Collectors.toList());
+        List<CommitOnModule> commitOnModulesHead = identifyChangeOnModuleHead(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
+        List<CommitOnModule> commitOnModulesTarget = identifyChangeOnModuleHead(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
+        for (CommitOnModule commitOnModule : this.changesOnModuleInInterval.values()) {
+            if (checkIfTheChangeIs(commitOnModulesTarget, commitOnModule)) {
+                commitOnModulesTarget.add(commitOnModule);
             }
         }
-        for (int i = 0; i < changeOnModulesTarget.size(); i++) {
-            ChangeOnModule changeOnModule = changeOnModulesTarget.get(i);
-            id2Num.put(changeOnModule.idCommit + changeOnModule.idCommitParent + changeOnModule.pathOld + changeOnModule.pathNew, i + 1);
+        for (int i = 0; i < commitOnModulesTarget.size(); i++) {
+            CommitOnModule commitOnModule = commitOnModulesTarget.get(i);
+            id2Num.put(commitOnModule.idCommit + commitOnModule.idCommitParent + commitOnModule.pathOld + commitOnModule.pathNew, i + 1);
         }
-        for (ChangeOnModule changeOnModule : changeOnModulesTarget) {
+        for (CommitOnModule commitOnModule : commitOnModulesTarget) {
             NodeCommit4Experiment nodeCommit4Experiment = new NodeCommit4Experiment();
             //id
-            nodeCommit4Experiment.idCommit = changeOnModule.idCommit;
-            nodeCommit4Experiment.idCommitParent = changeOnModule.idCommitParent;
+            nodeCommit4Experiment.idCommit = commitOnModule.idCommit;
+            nodeCommit4Experiment.idCommitParent = commitOnModule.idCommitParent;
             //node and edge
-            nodeCommit4Experiment.num = id2Num.get(changeOnModule.idCommit + changeOnModule.idCommitParent + changeOnModule.pathOld + changeOnModule.pathNew);
-            for (ChangeOnModule changeOnModuleParent : changeOnModule.parentsModification.values()) {
-                nodeCommit4Experiment.parents.add(id2Num.get(changeOnModule.idCommit + changeOnModule.idCommitParent + changeOnModule.pathOld + changeOnModule.pathNew));
+            nodeCommit4Experiment.num = id2Num.get(commitOnModule.idCommit + commitOnModule.idCommitParent + commitOnModule.pathOld + commitOnModule.pathNew);
+            for (CommitOnModule commitOnModuleParent : commitOnModule.parentsModification.values()) {
+                nodeCommit4Experiment.parents.add(id2Num.get(commitOnModule.idCommit + commitOnModule.idCommitParent + commitOnModule.pathOld + commitOnModule.pathNew));
             }
             //content
             //1. semantic type
             JdtTreeGenerator jdtTreeGenerator = new JdtTreeGenerator();
-            String sourcePrev = "public class Test{" + changeOnModule.sourceOld + "}";
-            String sourceCurrent = "public class Test{" + changeOnModule.sourceNew + "}";
+            String sourcePrev = "public class Test{" + commitOnModule.sourceOld + "}";
+            String sourceCurrent = "public class Test{" + commitOnModule.sourceNew + "}";
             ITree iTreePrev = jdtTreeGenerator.generateFrom().string(sourcePrev).getRoot();
             ITree iTreeCurrent = jdtTreeGenerator.generateFrom().string(sourceCurrent).getRoot();
             com.github.gumtreediff.matchers.Matcher defaultMatcher = Matchers.getInstance().getMatcher();
@@ -1101,66 +962,56 @@ public class Module implements Cloneable {
                 nodeCommit4Experiment.semantics[index]++;
             }
             //2. author
-            nodeCommit4Experiment.author = commitsAll.get(changeOnModule.idCommit).author;
+            nodeCommit4Experiment.author = commitsAll.get(commitOnModule.idCommit).author;
 
             //4. interval
             int interval = 0;
-            for (ChangeOnModule changeOnModuleParent : changeOnModule.parentsModification.values()) {
-                interval += (changeOnModule.date - changeOnModuleParent.date) / (60 * 60 * 24);
+            for (CommitOnModule commitOnModuleParent : commitOnModule.parentsModification.values()) {
+                interval += (commitOnModule.date - commitOnModuleParent.date) / (60 * 60 * 24);
             }
             nodeCommit4Experiment.interval = interval;
             //5. code churn
-            nodeCommit4Experiment.churn[0] = changeOnModule.calcNOAddedLines();
-            nodeCommit4Experiment.churn[1] = changeOnModule.calcNODeletedLines();
+            nodeCommit4Experiment.churn[0] = commitOnModule.calcNOAddedLines();
+            nodeCommit4Experiment.churn[1] = commitOnModule.calcNODeletedLines();
             nodeCommit4Experiment.churn[2] = nodeCommit4Experiment.churn[0] - nodeCommit4Experiment.churn[1];
             //6. co-change
-            for (ChangeOnModule changeOnModuleCoChange : commitsAll.get(changeOnModule.idCommit).idParent2Modifications.get(changeOnModule.idCommitParent).values()) {
+            for (CommitOnModule changeOnModuleCoCommit : commitsAll.get(commitOnModule.idCommit).idParent2Modifications.get(commitOnModule.idCommitParent).values()) {
                 //pathOld
-                if (!Objects.equals(changeOnModuleCoChange.pathOld, "/dev/null")){
-                    nodeCommit4Experiment.coupling.add(changeOnModuleCoChange.pathOld);
+                if (!Objects.equals(changeOnModuleCoCommit.pathOld, "/dev/null")){
+                    nodeCommit4Experiment.coupling.add(changeOnModuleCoCommit.pathOld);
                 }
                 //pathNew
-                if (Objects.equals(changeOnModuleCoChange.pathNew, "/dev/null")) {
-                    nodeCommit4Experiment.coupling.add(changeOnModuleCoChange.pathNew);
+                if (Objects.equals(changeOnModuleCoCommit.pathNew, "/dev/null")) {
+                    nodeCommit4Experiment.coupling.add(changeOnModuleCoCommit.pathNew);
                 }
             }
             //others
-            nodeCommit4Experiment.isMerge = changeOnModule.isMerge;
-            nodeCommit4Experiment.isFixingBug = bugs.calculateIsFix(changeOnModule.idCommit);
+            nodeCommit4Experiment.isMerge = commitOnModule.isMerge;
+            nodeCommit4Experiment.isFixingBug = bugs.calculateIsFix(commitOnModule.idCommit);
 
             commitGraph.add(nodeCommit4Experiment);
         }
         Commit commitHead = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
         NodeCommit4Experiment nodeCommit4ExperimentHead = new NodeCommit4Experiment();
         nodeCommit4ExperimentHead.num = 0;
-        nodeCommit4ExperimentHead.interval = (commitHead.date - changeOnModulesTarget.get(0).date) / (60 * 60 * 24);
+        nodeCommit4ExperimentHead.interval = (commitHead.date - commitOnModulesTarget.get(0).date) / (60 * 60 * 24);
         nodeCommit4ExperimentHead.author = "dummy";
-        for (ChangeOnModule changeOnModuleParent : changeOnModulesHead) {
-            nodeCommit4ExperimentHead.parents.add(id2Num.get(changeOnModuleParent.idCommit + changeOnModuleParent.idCommitParent));
+        for (CommitOnModule commitOnModuleParent : commitOnModulesHead) {
+            nodeCommit4ExperimentHead.parents.add(id2Num.get(commitOnModuleParent.idCommit + commitOnModuleParent.idCommitParent));
         }
         this.commitGraph.add(nodeCommit4ExperimentHead);
     }
-    public boolean checkIfTheChangeIs(List<ChangeOnModule> changeOnModulesTarget, ChangeOnModule changeOnModule) {
-        for (ChangeOnModule changeOnModuleChild : changeOnModule.childrenModification.values()) {
-            for (ChangeOnModule changeOnModuleTarget : changeOnModulesTarget) {
-                if (Objects.equals(changeOnModuleChild.idCommit, changeOnModuleTarget.idCommit)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    private List<ChangeOnModule> identifyChangeOnModuleHead(Commits commitsAll, String revisionMethod_target) {
-        List<ChangeOnModule> changesOnModulesHead = new ArrayList<>();
+    private List<CommitOnModule> identifyChangeOnModuleHead(Commits commitsAll, String revisionMethod_target) {
+        List<CommitOnModule> commitOnModulesHead = new ArrayList<>();
         Commit commit = commitsAll.get(revisionMethod_target);
-        List<String> idsCommit = commitsInInterval.stream().map(a -> a.id).collect(Collectors.toList());
+        List<String> idsCommit = changesOnModuleInInterval.values().stream().map(a -> a.idCommit).collect(Collectors.toList());
         while (true) {
             if (Objects.equals(commit, null)) {
                 break;
             } else if (idsCommit.contains(commit.id)) {
-                for (ChangeOnModule changeOnModule : changesOnModuleInInterval) {
-                    if (Objects.equals(changeOnModule.idCommit, commit.id)) {
-                        changesOnModulesHead.add(changeOnModule);
+                for (CommitOnModule CommitOnModule : changesOnModuleInInterval.values()) {
+                    if (Objects.equals(CommitOnModule.idCommit, commit.id)) {
+                        commitOnModulesHead.add(CommitOnModule);
                     }
                 }
                 break;
@@ -1168,6 +1019,17 @@ public class Module implements Cloneable {
             commit = commitsAll.get(commit.idParentMaster);
         }
         //違うAddから始まってるなら、それらのグラフは別々。片方を消す。
-        return changesOnModulesHead;
+        return commitOnModulesHead;
     }
+    public boolean checkIfTheChangeIs(List<CommitOnModule> commitOnModulesTarget, CommitOnModule CommitOnModule) {
+        for (CommitOnModule commitOnModuleChild : CommitOnModule.childrenModification.values()) {
+            for (CommitOnModule commitOnModuleTarget : commitOnModulesTarget) {
+                if (Objects.equals(commitOnModuleChild.idCommit, commitOnModuleTarget.idCommit)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    public void calcAST() { sourcecode.calcAST(); }
 }

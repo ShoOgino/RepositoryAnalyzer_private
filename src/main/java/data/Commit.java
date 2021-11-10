@@ -1,9 +1,6 @@
 package data;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
@@ -13,9 +10,9 @@ import java.util.*;
 public class Commit {
 	public String id = null;
 	public Integer date = null;
-	public String author = null ;
+	public String author = null;
 	public boolean isMerge = false;
-	public Map<String, ChangesOnModule> idParent2Modifications = new HashMap<>();
+	public Map<String, CommitsOnModule> idParent2Modifications = new HashMap<>();
 	public String idParentMaster = null;
 	List<String> pathsHasBeenBuggy = new ArrayList<>();
 	List<String> pathsBugIntroduced = new ArrayList<>();

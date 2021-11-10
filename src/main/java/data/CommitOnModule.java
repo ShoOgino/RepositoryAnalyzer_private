@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.*;
 
 @Data
-public class ChangeOnModule {
+public class CommitOnModule {
 	public String idCommit;
 	public String idCommitParent;
 	public int date;
@@ -20,13 +20,13 @@ public class ChangeOnModule {
 	public Diffs diffs;
 	public String pathNewParent;
 	@JsonIgnore
-	public ChangesOnModule parentsModification;
+	public CommitsOnModule parentsModification;
 	public List<String> parents;
 	@JsonIgnore
-	public ChangesOnModule childrenModification;
+	public CommitsOnModule childrenModification;
 	public List<String> children;
 
-	public ChangeOnModule() {
+	public CommitOnModule() {
 		this.idCommit= "";
 		this.idCommitParent = "";
 		this.date=0;
@@ -38,16 +38,16 @@ public class ChangeOnModule {
 		this.sourceNew= "";
 		this.diffs = new Diffs();
 		this.pathNewParent = "";
-		this.parentsModification = new ChangesOnModule();
+		this.parentsModification = new CommitsOnModule();
 		this.parents = new ArrayList<>();
-		this.childrenModification = new ChangesOnModule();
+		this.childrenModification = new CommitsOnModule();
 		this.children = new ArrayList<>();
 	}
 
-	public void loadAncestors(ChangesOnModule changesOnModule){
-		changesOnModule.put(this.idCommitParent, this.idCommit, this.pathOld, this.pathNew, this);
-		for(ChangeOnModule changeOnModule : this.parentsModification.values()) {
-			if(!changesOnModule.containsValue(changeOnModule)) changeOnModule.loadAncestors(changesOnModule);
+	public void loadAncestors(CommitsOnModule commitsOnModule){
+		commitsOnModule.put(this.idCommitParent, this.idCommit, this.pathOld, this.pathNew, this);
+		for(CommitOnModule commitOnModule : this.parentsModification.values()) {
+			if(!commitsOnModule.containsValue(commitOnModule)) commitOnModule.loadAncestors(commitsOnModule);
 		}
 	}
 

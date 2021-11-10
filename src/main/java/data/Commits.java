@@ -43,11 +43,11 @@ public class Commits implements Map<String, Commit> {
         }
         //それぞれのコミットで変更されているパスについて、path2dateBugIntroOldestより後ならpathsHasBeenBuggyに追加。
         for(Commit commit: commits.values()){
-            for(ChangesOnModule changesOnModule: commit.idParent2Modifications.values()){
-                for(ChangeOnModule changeOnModule: changesOnModule.values()){
-                    if(Objects.equals(changeOnModule.type, "ADD"))continue;
-                    if(changeOnModule.date<path2dateBugIntroOldest.get(changeOnModule.pathOld)){
-                        commit.pathsHasBeenBuggy.add(changeOnModule.pathOld);
+            for(CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()){
+                for(CommitOnModule commitOnModule : commitsOnModule.values()){
+                    if(Objects.equals(commitOnModule.type, "ADD"))continue;
+                    if(commitOnModule.date<path2dateBugIntroOldest.get(commitOnModule.pathOld)){
+                        commit.pathsHasBeenBuggy.add(commitOnModule.pathOld);
                     }
                 }
             }
