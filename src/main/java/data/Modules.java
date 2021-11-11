@@ -170,7 +170,6 @@ public class Modules implements Map<String, Module> {
     public void calculateAST(Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateAST")) {
             Module module = modules.get(pathModule);
-            module.identifySourcecodeTarget(repositoryMethod, revisionMethodTarget);
             module.calcAST();
         }
     }
@@ -179,7 +178,7 @@ public class Modules implements Map<String, Module> {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateCommitGraph")) {
             long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
-            module.identifyCommitsOnModuleTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
             module.calcCommitGraph(commitsAll, modulesAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
             long endTimeOverall = System.currentTimeMillis();
             if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
@@ -206,9 +205,7 @@ public class Modules implements Map<String, Module> {
             module.calcExecStmt();
             module.calcMaxNesting();
             //codeMetrics(Bug Prediction Based on Fine-Grained Module Histories)
-            /*
-            module.calcLOC();
-            */
+            //module.calcLOC();
         }
     }
 
@@ -259,22 +256,23 @@ public class Modules implements Map<String, Module> {
             long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
             //process metrics(Re-evaluating Method-Level Bug Prediction)
-            module.identifyCommitsOnModuleTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            if(module.commitGraph==null)continue;
             module.calcModuleHistories();
             module.calcAuthors();
-            module.calcStmtAdded();
+            module.calcSumStmtAdded();
             module.calcMaxStmtAdded();
             module.calcAvgStmtAdded();
-            module.calcStmtDeleted();
+            module.calcSumStmtDeleted();
             module.calcMaxStmtDeleted();
             module.calcAvgStmtDeleted();
-            module.calcChurn();
+            module.calcSumChurn();
             module.calcMaxChurn();
             module.calcAvgChurn();
-            module.calcDecl();
-            module.calcCond();
-            module.calcElseAdded();
-            module.calcElseDeleted();
+            module.calcSumDecl();
+            module.calcSumCond();
+            module.calcSumElseAdded();
+            module.calcSumElseDeleted();
             /*
             //processMetrics(Bug Prediction Based on Fine-Grained Module Histories)
             module.calcAddLOC();
@@ -354,13 +352,24 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
+    public void saveAsCSV(String pathOutput) throws IOException {
+        File dir = new File(pathOutput);
+        File dirParent = new File(dir.getParent());
+        dirParent.mkdirs();
 
-    public void saveAsCSV(String pathDataset) {
-        File dir = new File(pathDataset);
+        File file = new File(pathOutput);
+        FileWriter fileWriter = new FileWriter(file);
+        for(Module module: modules.values()){
+            fileWriter.write(module.outputRow());
+        }
+        fileWriter.close();
+    }
+    public void saveAsCSV_(String pathOutput) {
+        File dir = new File(pathOutput);
         File dirParent = new File(dir.getParent());
         dirParent.mkdirs();
         try {
-            FileOutputStream fos = new FileOutputStream(pathDataset);
+            FileOutputStream fos = new FileOutputStream(pathOutput);
             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
             BufferedWriter writer = new BufferedWriter(osw);
             CsvConfiguration config = new CsvConfiguration();
@@ -379,7 +388,6 @@ public class Modules implements Map<String, Module> {
             e.printStackTrace();
         }
     }
-
     public void loadModulesFromFile(String pathModules) {
         List<String> paths = findFiles(pathModules, ".json");
         for (String path : ProgressBar.wrap(paths, "loadModulesFromFile")) {
@@ -399,64 +407,40 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-
-    @Override
-    public int size() {
+    @Override public int size() {
         return modules.size();
     }
-
-    @Override
-    public boolean isEmpty() {
+    @Override public boolean isEmpty() {
         return modules.isEmpty();
     }
-
-    @Override
-    public boolean containsKey(Object key) {
+    @Override public boolean containsKey(Object key) {
         return modules.containsKey(key);
     }
-
-    @Override
-    public boolean containsValue(Object value) {
+    @Override public boolean containsValue(Object value) {
         return modules.containsValue(value);
     }
-
-    @Override
-    public Module get(Object key) {
+    @Override public Module get(Object key) {
         return modules.get(key);
     }
-
-    @Override
-    public Module put(String key, Module value) {
+    @Override public Module put(String key, Module value) {
         return modules.put(key, value);
     }
-
-    @Override
-    public Module remove(Object key) {
+    @Override public Module remove(Object key) {
         return modules.remove(key);
     }
-
-    @Override
-    public void putAll(Map<? extends String, ? extends Module> m) {
+    @Override public void putAll(Map<? extends String, ? extends Module> m) {
         modules.putAll(m);
     }
-
-    @Override
-    public void clear() {
+    @Override public void clear() {
         modules.clear();
     }
-
-    @Override
-    public Set<String> keySet() {
+    @Override public Set<String> keySet() {
         return modules.keySet();
     }
-
-    @Override
-    public Collection<Module> values() {
+    @Override public Collection<Module> values() {
         return modules.values();
     }
-
-    @Override
-    public Set<Entry<String, Module>> entrySet() {
+    @Override public Set<Entry<String, Module>> entrySet() {
         return modules.entrySet();
     }
 }

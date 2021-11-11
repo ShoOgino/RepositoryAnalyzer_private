@@ -30,8 +30,9 @@ public class CommitsThread  extends Thread{
             for (RevCommit revCommit : ProgressBar.wrap(revcommits, "loadCommitsFromRepository")) {
                 Commit commit = new Commit();
                 commit.id = revCommit.getName();
-                PersonIdent authorIdent = revCommit.getAuthorIdent();
-                commit.date = (int)(authorIdent.getWhen().getTime()/1000);
+                //PersonIdent authorIdent = revCommit.getAuthorIdent();
+                //commit.date = (int)(authorIdent.getWhen().getTime()/1000);
+                commit.date = revCommit.getCommitTime();
                 commit.author = revCommit.getAuthorIdent().getName();
                 commit.isMerge = revCommit.getParentCount() > 1;
                 commit.idParentMaster = revCommit.getParentCount() == 0 ? "0000000000000000000000000000000000000000" : revCommit.getParent(0).getName();
@@ -53,13 +54,14 @@ public class CommitsThread  extends Thread{
                             entry -> !pathsMain.contains(entry.getKey().getKey(3))
                     );
                     for (CommitOnModule commitOnModule : commitsOnModuleMain.values()) {
-                        if (0 == commitsOnModuleSub.findFromPathNew(commitOnModule.pathNew).size()) {
+                        if (0 == commitsOnModuleSub.queryPathNew(commitOnModule.pathNew).size()) {
                             if (!commitOnModule.type.equals("DELETE")) {
                                 CommitOnModule m = new CommitOnModule();
                                 m.idCommit = revCommit.getName();
                                 m.idCommitParent = revCommitParentSub.getName();
-                                PersonIdent authorIdent_ = revCommit.getAuthorIdent();
-                                m.date = (int)(authorIdent.getWhen().getTime()/1000);
+                                //PersonIdent authorIdent_ = revCommit.getAuthorIdent();
+                                //m.date = (int)(authorIdent.getWhen().getTime()/1000);
+                                m.date = revCommit.getCommitTime();
                                 m.author = revCommit.getAuthorIdent().getName();
                                 m.isMerge = revCommit.getParentCount() > 1;
                                 m.type = "UNCHANGE";
@@ -100,8 +102,9 @@ public class CommitsThread  extends Thread{
                 CommitOnModule commitOnModule = new CommitOnModule();
                 commitOnModule.idCommit = revCommit.getName();
                 commitOnModule.idCommitParent = revCommitParent == null ? "0000000000000000000000000000000000000000" : revCommitParent.getName();
-                PersonIdent authorIdent = revCommit.getAuthorIdent();
-                commitOnModule.date = (int)(authorIdent.getWhen().getTime()/1000);
+                //PersonIdent authorIdent = revCommit.getAuthorIdent();
+                //commitOnModule.date = (int)(authorIdent.getWhen().getTime()/1000);
+                commitOnModule.date = revCommit.getCommitTime();
                 commitOnModule.author = revCommit.getAuthorIdent().getName();
                 commitOnModule.isMerge = revCommit.getParentCount() > 1;
                 commitOnModule.type = diffEntry.getChangeType().toString();
@@ -116,14 +119,16 @@ public class CommitsThread  extends Thread{
                     commitOnModule.sourceOld = null;
                 } else {
                     ObjectLoader loader = repository.open(diffEntry.getOldId().toObjectId());
-                    commitOnModule.sourceOld = new String(loader.getBytes());
+                    String sourceOldRaw = new String(loader.getBytes());
+                    commitOnModule.sourceOld = new Sourcecode(sourceOldRaw);
                 }
                 //コミット直後のソースコードを取得
                 if (diffEntry.getNewId().name().equals("0000000000000000000000000000000000000000")) {
                     commitOnModule.sourceNew = null;
                 } else {
                     ObjectLoader loader = repository.open(diffEntry.getNewId().toObjectId());
-                    commitOnModule.sourceNew = new String(loader.getBytes());
+                    String sourceNewRaw = new String(loader.getBytes());
+                    commitOnModule.sourceNew = new Sourcecode(sourceNewRaw);
                 }
 
                 for (Edit changeOriginal : diffFormatter.toFileHeader(diffEntry).toEditList()) {

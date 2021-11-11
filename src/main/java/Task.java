@@ -82,9 +82,9 @@ public class Task implements Callable<String> {
                 modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethodTarget);
 
                 // calculate products on the target modules
-                //if (product.contains("commitGraph")){
-                //    modulesTarget.calculateCommitGraph(commitsAll, modulesAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
-                //}
+                if (product.contains("commitGraph")){
+                    modulesTarget.calculateCommitGraph(commitsAll, modulesAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
+                }
                 if (product.contains("metrics")) {
                     modulesTarget.calculateProcessMetrics(commitsAll, modulesAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
                     modulesTarget.calculateCodeMetrics(repositoryFile, revisionFileTarget, repositoryMethod, revisionMethodTarget);

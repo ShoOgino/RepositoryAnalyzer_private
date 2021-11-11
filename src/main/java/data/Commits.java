@@ -112,73 +112,46 @@ public class Commits implements Map<String, Commit> {
         }
     }
 
-    @Override
-    public int size() {
+    @Override public int size() {
         return commits.size();
     }
-
-    @Override
-    public boolean isEmpty() {
+    @Override public boolean isEmpty() {
         return commits.isEmpty();
     }
-
-    @Override
-    public boolean containsKey(Object key) {
+    @Override public boolean containsKey(Object key) {
         return commits.containsKey(key);
     }
-
-    @Override
-    public boolean containsValue(Object value) {
+    @Override public boolean containsValue(Object value) {
         return commits.containsValue(value);
     }
-
-    @Override
-    public Commit get(Object key) {
+    @Override public Commit get(Object key) {
         return commits.get(key);
     }
-
-    @Override
-    public Commit put(String key, Commit value) {
+    @Override public Commit put(String key, Commit value) {
         return commits.put(key, value);
     }
-
-    @Override
-    public Commit remove(Object key) {
+    @Override public Commit remove(Object key) {
         return commits.remove(key);
     }
-
-    @Override
-    public void putAll(Map<? extends String, ? extends Commit> m) {
+    @Override public void putAll(Map<? extends String, ? extends Commit> m) {
         commits.putAll(m);
     }
-
-    @Override
-    public void clear() {
+    @Override public void clear() {
         commits.clear();
     }
-
-    @Override
-    public Set<String> keySet() {
+    @Override public Set<String> keySet() {
         return commits.keySet();
     }
-
-    @Override
-    public Collection<Commit> values() {
+    @Override public Collection<Commit> values() {
         return commits.values();
     }
-
-    @Override
-    public Set<Entry<String, Commit>> entrySet() {
+    @Override public Set<Entry<String, Commit>> entrySet() {
         return commits.entrySet();
     }
-
-    @Override
-    public boolean equals(Object o) {
+    @Override public boolean equals(Object o) {
         return commits.equals(o);
     }
-
-    @Override
-    public int hashCode() {
+    @Override public int hashCode() {
         return commits.hashCode();
     }
 }

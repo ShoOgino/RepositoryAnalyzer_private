@@ -1,39 +1,55 @@
 package data;
 
 import ast.*;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import misc.DoubleConverter;
+import net.sf.jsefa.csv.annotation.CsvField;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.dom.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Sourcecode {
-    private String rawdata = null;
+    public String rawdata = null;
     @JsonIgnore public CompilationUnit compilationUnit = null;
     public NodeAST4Experiment astRoot = null;
-    private int countASTNode = 0;
+    public int countASTNode = 0;
+    //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
+    int fanOut = 0;
+    int parameters = 0;
+    int localVar = 0;
+    double commentRatio = 0;
+    long countPath = 0;
+    int complexity = 0;
+    int execStmt = 0;
+    int maxNesting = 0;
+    //codeMetrics(Re-evaluating Method-Level Bug Prediction)
+    int LOC = 0;
 
+    public Sourcecode(){}
     public Sourcecode(String rawdata) {
         this.rawdata = rawdata;
         calcCompilationUnit();
     }
-    public int calcFanOut() {
+    public void calcFanOut() {
         VisitorFanout visitor = new VisitorFanout();
         compilationUnit.accept(visitor);
-        return visitor.fanout;
+        this.fanOut = visitor.fanout;
     }
-    public int calcParameters() {
+    public void calcParameters() {
         data.VisitorMethodDeclaration visitorMethodDeclaration = new data.VisitorMethodDeclaration();
         compilationUnit.accept(visitorMethodDeclaration);
-        return  visitorMethodDeclaration.parameters;
+        this.parameters = visitorMethodDeclaration.parameters;
     }
-    public int calcLocalVar() {
+    public void calcLocalVar() {
         VisitorLocalVar visitorLocalVar = new VisitorLocalVar();
         compilationUnit.accept(visitorLocalVar);
-        return  visitorLocalVar.NOVariables;
+        this.localVar = visitorLocalVar.NOVariables;
     }
-    public double calcCommentRatio() {
+    public void calcCommentRatio() {
         String regex = "\n|\r\n";
         String[] linesMethod = this.rawdata.split(regex, 0);
 
@@ -59,34 +75,34 @@ public class Sourcecode {
                 countLineComment++;
             }
         }
-        return (float) countLineComment / (float) countLineCode;
+        this.commentRatio =  (float) countLineComment / (float) countLineCode;
     }
-    public long calcCountPath() {
+    public void calcCountPath() {
         VisitorCountPath visitorCountPath = new VisitorCountPath();
         compilationUnit.accept(visitorCountPath);
         long countPath = 1;
         for (int branch : visitorCountPath.branches) {
             countPath *= branch;
         }
-        return countPath;
+        this.countPath =  countPath;
     }
-    public int calcComplexity() {
+    public void calcComplexity() {
         VisitorComplexity visitorComplexity = new VisitorComplexity();
         compilationUnit.accept(visitorComplexity);
-        return visitorComplexity.complexity;
+        this.complexity = visitorComplexity.complexity;
     }
-    public int calcExecStmt() {
+    public void calcExecStmt() {
         VisitorExecStmt visitorExecStmt = new VisitorExecStmt();
         compilationUnit.accept(visitorExecStmt);
-        return visitorExecStmt.execStmt;
+        this.execStmt =  visitorExecStmt.execStmt;
     }
-    public int calcMaxNesting() {
+    public void calcMaxNesting() {
         VisitorMaxNesting visitorMaxNesting = new VisitorMaxNesting();
         compilationUnit.accept(visitorMaxNesting);
-        return visitorMaxNesting.maxNesting;
+        this.maxNesting = visitorMaxNesting.maxNesting;
     }
-    public int calcLOC(){
-        return rawdata.split("\n").length;
+    public void calcLOC(){
+        this.LOC = rawdata.split("\n").length;
     }
     public void calcCompilationUnit() {
         String sourceClass = "public class Dummy{" + this.rawdata + "}";
