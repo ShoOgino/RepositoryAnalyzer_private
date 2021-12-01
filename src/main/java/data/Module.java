@@ -20,13 +20,13 @@ public class Module implements Cloneable {
     @JsonIgnore public String id = "";
     public String path = null;
     @JsonIgnore public CommitsOnModule commitsOnModule = null;
-    public CommitOnModule commitGraph = new CommitOnModule();
+    public CommitsOnModule commitGraph = new CommitsOnModule();
     public Sourcecode sourcecode = null;
-    @JsonIgnore public Bugs bugs = null;
-    int fanIn = 0;
     int hasBeenBuggy = 0;
     int isBuggy = 0;
-    public void calcIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
+    int bugReports = 0;
+    int bugIntroNum = 0;
+    public void calcIsBuggy(Commits commitsAll, Bugs bugsAll , String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy) {
         Set<String> pathsPast = new HashSet<>();
         for (CommitOnModule CommitOnModule : commitsOnModule.values()) {
             if (!Objects.equals(CommitOnModule.type, "DELETE")) pathsPast.add(CommitOnModule.pathNew);
@@ -45,7 +45,7 @@ public class Module implements Cloneable {
             }
         }
     }
-    public void calcHasBeenBuggy(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
+    public void calcHasBeenBuggy(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
         if (bugAtomics == null) return;
         for (BugAtomic bugAtomic : bugAtomics) {
@@ -57,6 +57,9 @@ public class Module implements Cloneable {
             }
         }
     }
+    public void calcBugReports(Bugs bugsAll){
+    }
+    public void calcBugIntroNum(){}
 
     public Module() {}
     public Module(String path) {
@@ -140,6 +143,7 @@ public class Module implements Cloneable {
         sourcecode.calcLOC();
     }
     //processMetrics(Re-evaluating Method-Level Bug Prediction)
+    /*
     public void calcAddLOC() {
         commitGraph.calcAddLOC();
     }
@@ -179,32 +183,30 @@ public class Module implements Cloneable {
     public void calcMinInterval() {
         commitGraph.calcMinInterval();
     }
+    */
     //others
-    //この中で、HEADの特定もする。
     public void identifyCommitGraphTarget(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         Commit commit = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
 
-        //コミットグラフのheadを特定
+        //コミットグラフのheadを特定+その祖先をコミットグラフの要素として特定
         List<String> idsCommit = this.commitsOnModule.values().stream().map(a -> a.idCommit).collect(Collectors.toList());
         while (true) {
             if (idsCommit.contains(commit.id)) {
-                this.commitGraph = commitsOnModule.queryIdCommit(commit.id).get(0);
+                List<CommitOnModule> commitOnModules = commitsOnModule.queryIdCommit(commit.id);
+                for(CommitOnModule commitOnModule: commitOnModules){//ある時点から見て最新の「コミット」は2つ存在することがある。例えば、最新のコミットがマージコミットの場合。
+                    if(Objects.equals(commitOnModule.type, "DELETE")) continue;
+                    commitOnModule.loadAncestors(this.commitGraph);
+                }
                 break;
             }
-            if(!commitsAll.containsKey(commit.idParentMaster)){
-                break;
-            } else{
-                commit = commitsAll.get(commit.idParentMaster);
-            }
+            if(!commitsAll.containsKey(commit.idParentMaster)) break;
+            else commit = commitsAll.get(commit.idParentMaster);
         }
 
-        //コミットグラフのHeadが参照期間内にあるかを判定
+        //コミットグラフの要素がきちんと期間内にあるかどうかを確認
         int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
         int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-        if(dateBegin <= this.commitGraph.date & this.commitGraph.date <= dateEnd){
-            this.commitGraph.prune(dateBegin, dateEnd);
-            this.commitGraph.flattenParents();
-        }
+        this.commitGraph.excludeCommitsOutOfInterval(dateBegin, dateEnd);
     }
     public void identifySourcecodeTarget(Repository repositoryMethod, String idCommit) throws IOException {
         RevCommit revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(idCommit));
@@ -219,15 +221,19 @@ public class Module implements Cloneable {
             }
         }
     }
-    public void calcAST() { commitGraph.sourceNew.calcAST(); }
+    public void calcAST() { sourcecode.calcAST(); }
     public void calcCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
-        commitGraph.setMetricsOnEachNode();
+        try{
+            commitGraph.setMetricsOnEachNode();
+        }catch(Exception e){
+            System.out.println(this.path);
+        }
     }
     public String outputRow(){
         String row =
                 "\"" + path + "\"" + ", " +
                 isBuggy + ", " +
-                fanIn + ", " +
+                sourcecode.fanIn + ", " +
                 sourcecode.fanOut + ", " +
                 sourcecode.localVar + ", " +
                 sourcecode.parameters + ", "+
@@ -236,7 +242,7 @@ public class Module implements Cloneable {
                 sourcecode.complexity + ", "+
                 sourcecode.execStmt + ", "+
                 sourcecode.maxNesting + ", "+
-                commitGraph.moduleHistories + ", "+
+                commitGraph.numOfCommits + ", "+
                 commitGraph.authors + ", "+
                 commitGraph.sumStmtAdded + ", "+
                 commitGraph.maxStmtAdded + ", "+

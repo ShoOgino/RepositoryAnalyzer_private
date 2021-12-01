@@ -18,6 +18,7 @@ public class Sourcecode {
     public NodeAST4Experiment astRoot = null;
     public int countASTNode = 0;
     //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
+    int fanIn = 0;
     int fanOut = 0;
     int parameters = 0;
     int localVar = 0;
@@ -58,20 +59,15 @@ public class Sourcecode {
         boolean inComment = false;
         for (String line : linesMethod) {
             countLineCode++;
-            if (line.matches(".*\\*/\\S+")) {
-                inComment = false;
-            } else if (line.matches(".*\\*/\\s*")) {
+            if (line.matches(".*\\*/.*")) {
                 inComment = false;
                 countLineComment++;
             } else if (inComment) {
                 countLineComment++;
-            } else if (line.matches("\\S+/\\*.*")) {
-                inComment = true;
-            } else if (line.matches("\\s*/\\*.*")) {
+            } else if (line.matches(".*/\\*.*")) {
                 countLineComment++;
                 inComment = true;
-            } else if (line.matches("\\S+//.*")) {
-            } else if (line.matches("\\s*//.*")) {
+            } else if (line.matches(".*//.*")) {
                 countLineComment++;
             }
         }

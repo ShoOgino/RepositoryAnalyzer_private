@@ -42,7 +42,6 @@ public class Modules implements Map<String, Module> {
         analyzeDevelopmentHistoryOnModule(commits);
         completeDevelopmentHistoryOnModule();
     }
-
     public void identifyChangesOnModule(Commits commits) {
         for (Commit commit : ProgressBar.wrap(commits.values(), "identifyChangeOnModules")) {
             for (CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()) {
@@ -57,7 +56,6 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-
     public void putChangeOnModule(CommitOnModule commitOnModule, String pathModule) {
         if (!modules.containsKey(pathModule)) {
             Module module = new Module(pathModule);
@@ -65,7 +63,6 @@ public class Modules implements Map<String, Module> {
         }
         modules.get(pathModule).commitsOnModule.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
     }
-
     public void analyzeDevelopmentHistoryOnModule(Commits commits) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "identifyCommitsParent")) {
             Module moduleTarget = modules.get(pathModule);
@@ -115,7 +112,6 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-
     public void completeDevelopmentHistoryOnModule() {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "completeCommitHistory")) {
             Module moduleTarget = modules.get(pathModule);
@@ -142,7 +138,6 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-
     public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget) throws IOException, GitAPIException {
         List<String> pathSources = new ArrayList<>();
         RevCommit revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(commitTarget));
@@ -166,14 +161,12 @@ public class Modules implements Map<String, Module> {
             //if(!pathSource.contains("test") & 0<commitsInInterval.size()) modules.put(pathSource, moduleTarget);
         }
     }
-
     public void calculateAST(Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateAST")) {
             Module module = modules.get(pathModule);
             module.calcAST();
         }
     }
-
     public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) throws IOException {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateCommitGraph")) {
             long startTimeOverall = System.currentTimeMillis();
@@ -188,10 +181,8 @@ public class Modules implements Map<String, Module> {
         }
         System.out.println("");
     }
-
     public void calculateCodeMetrics(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
         checkoutRepository(repositoryFile, revisionFileTarget);
-        calculateFanIn(repositoryFile.getDirectory().getParentFile().getAbsolutePath());
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcCodeMetrics")) {
             Module module = modules.get(pathModule);
             //codemetrics(Re-evaluating Method-Level Bug Prediction)
@@ -207,10 +198,8 @@ public class Modules implements Map<String, Module> {
             //codeMetrics(Bug Prediction Based on Fine-Grained Module Histories)
             //module.calcLOC();
         }
-    }
-
-    public void calculateFanIn(String pathRepositoryFile) {
         try {
+            String pathRepositoryFile = repositoryFile.getDirectory().getParentFile().getAbsolutePath();
             System.out.println("calculating FanIn...");
             final String[] sourcePathDirs = {};
             final String[] libraries = findFiles(pathRepositoryFile, ".jar").toArray(new String[0]);
@@ -238,7 +227,7 @@ public class Modules implements Map<String, Module> {
                 for (String pathMethod : modules.keySet()) {
                     String idMethod = modules.get(pathMethod).id;
                     if (Objects.equals(idMethod, idMethodCalled)) {
-                        modules.get(pathMethod).fanIn++;
+                        modules.get(pathMethod).sourcecode.fanIn++;
                         //flag=true;
                         break;
                     }
@@ -250,7 +239,6 @@ public class Modules implements Map<String, Module> {
             exception.printStackTrace();
         }
     }
-
     public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcProcessMetrics")) {
             long startTimeOverall = System.currentTimeMillis();
@@ -313,21 +301,18 @@ public class Modules implements Map<String, Module> {
              */
         }
     }
-
     public void calculateIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateIsBuggy")) {
             Module module = modules.get(pathModule);
-            module.calcIsBuggy(commitsAll, revisionMethodTarget, intervalRevisionMethod_referableCalculatingIsBuggy, bugsAll);
+            module.calcIsBuggy(commitsAll, bugsAll, revisionMethodTarget, intervalRevisionMethod_referableCalculatingIsBuggy);
         }
     }
-
     public void calculateHasBeenBuggy(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateHasBeenBuggy")) {
             Module module = modules.get(pathModule);
-            module.calcHasBeenBuggy(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
+            module.calcHasBeenBuggy(commitsAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
         }
     }
-
     public void saveAsJson(String pathModules) {
         int count = 0;
         for (Entry<String, Module> entry : ProgressBar.wrap(modules.entrySet(), "saveModules")) {

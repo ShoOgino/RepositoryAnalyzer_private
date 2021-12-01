@@ -7,6 +7,7 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -40,14 +41,14 @@ public class Task implements Callable<String> {
     }
 
     @Override
-    public String  call() {
+    public String  call()  {
         System.out.println(name);
+        // copy repositoryFile to process tasks in parallel. (we have to checkout and keep a revision in repositoryFile while processing a task.)
+        pathRepositoryFileOriginal = pathProject+"/repositoryFile";
+        File fileRepositoryFileOriginal = new File(pathRepositoryFileOriginal);
+        pathRepositoryFileCopy = pathProject+"/repositoryFile_" + name;
+        File fileRepositoryFileCopy = new File(pathRepositoryFileCopy);
         try {
-            // copy repositoryFile to process tasks in parallel. (we have to checkout a revision in repositoryFile and keep it while processing a task.)
-            pathRepositoryFileOriginal = pathProject+"/repositoryFile";
-            File fileRepositoryFileOriginal = new File(pathRepositoryFileOriginal);
-            pathRepositoryFileCopy = pathProject+"/repositoryFile_" + name;
-            File fileRepositoryFileCopy = new File(pathRepositoryFileCopy);
             FileUtils.copyDirectory(fileRepositoryFileOriginal, fileRepositoryFileCopy);
             repositoryFile = new FileRepositoryBuilder().setGitDir(new File(pathRepositoryFileCopy + "/.git")).build();
             pathRepositoryMethod = pathProject+"/repositoryMethod";
@@ -114,13 +115,15 @@ public class Task implements Callable<String> {
                     modulesTarget.saveAsCSV(pathOutput + ".csv");
                 }
             }
-
-            // delete copied repositoryFile.
-            repositoryFile.close();
-            FileUtils.deleteDirectory(fileRepositoryFileCopy);
-
         }catch (Exception exception){
             exception.printStackTrace();
+        }finally {
+            repositoryFile.close();
+            try {
+                FileUtils.deleteDirectory(fileRepositoryFileCopy);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
         return "";
     }

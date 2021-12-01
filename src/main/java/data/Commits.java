@@ -61,7 +61,6 @@ public class Commits implements Map<String, Commit> {
             }
         }
     }
-
     public void loadCommitsFromRepository(Repository repository, String pathCommits){
         List<RevCommit> commitsAll = new ArrayList<>();
         Collection<Ref> allRefs = repository.getAllRefs().values();
@@ -94,7 +93,6 @@ public class Commits implements Map<String, Commit> {
             }
         }
     }
-
     public void loadCommitsFromFile(String pathCommits) {
         List<String> paths = findFiles(pathCommits, "json");
         for(String path: ProgressBar.wrap(paths, "loadCommitsFromFile")) {
@@ -111,7 +109,6 @@ public class Commits implements Map<String, Commit> {
             }
         }
     }
-
     @Override public int size() {
         return commits.size();
     }

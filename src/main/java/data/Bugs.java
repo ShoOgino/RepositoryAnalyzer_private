@@ -36,32 +36,6 @@ public class Bugs implements Map<String, Bug>{
             e.printStackTrace();
         }
     }
-
-    @Override
-    public int size() {
-        return bugs.size();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return bugs.isEmpty();
-    }
-
-    @Override
-    public boolean containsKey(Object key) {
-        return bugs.containsKey(key);
-    }
-
-    @Override
-    public boolean containsValue(Object value) {
-        return bugs.containsValue(value);
-    }
-
-    @Override
-    public Bug get(Object key) {
-        return bugs.get(key);
-    }
-
     public List<BugAtomic> identifyAtomicBugs(String path){
         List<BugAtomic> bugAtomicsIdentified =new ArrayList<>();
         for(Bug bug: bugs.values()){
@@ -73,7 +47,6 @@ public class Bugs implements Map<String, Bug>{
         }
         return bugAtomicsIdentified;
     }
-
     public boolean calculateIsFix(String idCommit){
         for(Bug bug: bugs.values()){
             for(BugAtomic bugAtomic: bug.bugAtomics){
@@ -84,8 +57,7 @@ public class Bugs implements Map<String, Bug>{
         }
         return  false;
     }
-
-    public List<Bug> identifyBug(String path) {
+    public List<Bug> identifyBugs(String path) {
         List<Bug> bugsIdentified =new ArrayList<>();
         for(Bug bug: bugs.values()){
             for(BugAtomic bugAtomic: bug.bugAtomics){
@@ -98,38 +70,42 @@ public class Bugs implements Map<String, Bug>{
         return bugsIdentified;
     }
 
-    @Override
-    public Bug put(String key, Bug value) {
+
+
+    @Override public int size() {
+        return bugs.size();
+    }
+    @Override public boolean isEmpty() {
+        return bugs.isEmpty();
+    }
+    @Override public boolean containsKey(Object key) {
+        return bugs.containsKey(key);
+    }
+    @Override public boolean containsValue(Object value) {
+        return bugs.containsValue(value);
+    }
+    @Override public Bug get(Object key) {
+        return bugs.get(key);
+    }
+    @Override public Bug put(String key, Bug value) {
         return bugs.put(key, value);
     }
-
-    @Override
-    public Bug remove(Object key) {
+    @Override public Bug remove(Object key) {
         return bugs.remove(key);
     }
-
-    @Override
-    public void putAll(Map<? extends String, ? extends Bug> m) {
+    @Override public void putAll(Map<? extends String, ? extends Bug> m) {
         bugs.putAll(m);
     }
-
-    @Override
-    public void clear() {
+    @Override public void clear() {
         bugs.clear();
     }
-
-    @Override
-    public Set<String> keySet() {
+    @Override public Set<String> keySet() {
         return bugs.keySet();
     }
-
-    @Override
-    public Collection<Bug> values() {
+    @Override public Collection<Bug> values() {
         return bugs.values();
     }
-
-    @Override
-    public Set<Entry<String, Bug>> entrySet() {
+    @Override public Set<Entry<String, Bug>> entrySet() {
         return bugs.entrySet();
     }
 }
