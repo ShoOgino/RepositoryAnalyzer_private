@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSourcecode {
-
     @Test
     public void testCalcFanOut1(){
         Sourcecode sourcecode = new Sourcecode();
@@ -24,7 +23,7 @@ public class TestSourcecode {
                         "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcFanOut();
-        assertEquals(10, sourcecode.fanOut);
+        assertEquals(10, sourcecode.fanout);
     }
     @Test
     public void testCalcFanOut2(){
@@ -44,7 +43,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcFanOut();
-        assertEquals(12, sourcecode.fanOut);
+        assertEquals(12, sourcecode.fanout);
     }
     @Test
     public void testCalcFanOut3(){
@@ -75,7 +74,7 @@ public class TestSourcecode {
                         "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcFanOut();
-        assertEquals(18, sourcecode.fanOut);
+        assertEquals(18, sourcecode.fanout);
     }
     @Test
     public void testCalcFanOut4(){
@@ -123,7 +122,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcFanOut();
-        assertEquals(11, sourcecode.fanOut);
+        assertEquals(11, sourcecode.fanout);
     }
     @Test
     public void testCalcFanOut5(){
@@ -142,7 +141,7 @@ public class TestSourcecode {
                         "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcFanOut();
-        assertEquals(14, sourcecode.fanOut);
+        assertEquals(14, sourcecode.fanout);
     }
 
     @Test
@@ -444,7 +443,7 @@ public class TestSourcecode {
                         "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcLocalVar();
-        assertEquals(35, sourcecode.localVar);
+        assertEquals(35, sourcecode.numOfVariablesLocal);
     }
     @Test
     public void testCalcLocalVar2(){
@@ -517,7 +516,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcLocalVar();
-        assertEquals(12, sourcecode.localVar);
+        assertEquals(12, sourcecode.numOfVariablesLocal);
     }
     @Test
     public void testCalcLocalVar3(){
@@ -596,7 +595,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcLocalVar();
-        assertEquals(10, sourcecode.localVar);
+        assertEquals(10, sourcecode.numOfVariablesLocal);
     }
     @Test
     public void testCalcLocalVar4(){
@@ -728,7 +727,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcLocalVar();
-        assertEquals(17, sourcecode.localVar);
+        assertEquals(17, sourcecode.numOfVariablesLocal);
     }
     @Test
     public void testCalcLocalVar5(){
@@ -789,7 +788,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcLocalVar();
-        assertEquals(10, sourcecode.localVar);
+        assertEquals(10, sourcecode.numOfVariablesLocal);
     }
 
     @Test
@@ -809,7 +808,7 @@ public class TestSourcecode {
                         "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcParameters();
-        assertEquals(0, sourcecode.fanOut);
+        assertEquals(0, sourcecode.fanout);
     }
     @Test
     public void testCalcParameters2(){
@@ -870,7 +869,7 @@ public class TestSourcecode {
                         "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcParameters();
-        assertEquals(1, sourcecode.parameters);
+        assertEquals(1, sourcecode.numOfParameters);
     }
     @Test
     public void testCalcParameters3(){
@@ -890,7 +889,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcParameters();
-        assertEquals(2, sourcecode.parameters);
+        assertEquals(2, sourcecode.numOfParameters);
     }
 
     @Test
@@ -917,7 +916,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCommentRatio();
-        assertEquals(String.format("%.5f", 14/(float)19), String.format("%.5f", sourcecode.commentRatio));
+        assertEquals(String.format("%.5f", 14/(float)19), String.format("%.5f", sourcecode.ratioOfLinesComment));
     }
     @Test
     public void testCalcCommentRatio2(){
@@ -949,7 +948,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCommentRatio();
-        assertEquals(String.format("%.5f",0.20000) , String.format("%.5f", sourcecode.commentRatio));
+        assertEquals(String.format("%.5f",0.20000) , String.format("%.5f", sourcecode.ratioOfLinesComment));
     }
     @Test
     public void testCalcCommentRatio3(){
@@ -1030,7 +1029,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCommentRatio();
-        assertEquals(String.format("%.5f",13/(float)74) , String.format("%.5f", sourcecode.commentRatio));
+        assertEquals(String.format("%.5f",13/(float)74) , String.format("%.5f", sourcecode.ratioOfLinesComment));
     }
     @Test
     public void testCalcCommentRatio4(){
@@ -1058,7 +1057,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCommentRatio();
-        assertEquals(String.format("%.5f",0.19047619) , String.format("%.5f", sourcecode.commentRatio));
+        assertEquals(String.format("%.5f",0.19047619) , String.format("%.5f", sourcecode.ratioOfLinesComment));
     }
 
     @Test
@@ -1074,7 +1073,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCountPath();
-        assertEquals(4, sourcecode.countPath);
+        assertEquals(4, sourcecode.numOfPaths);
     }
     @Test
     public void testCalcCountPath2(){
@@ -1104,7 +1103,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCountPath();
-        assertEquals(16 , sourcecode.countPath);
+        assertEquals(16 , sourcecode.numOfPaths);
     }
     @Test
     public void testCalcCountPath3(){
@@ -1132,7 +1131,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCountPath();
-        assertEquals(8 , sourcecode.countPath);
+        assertEquals(8 , sourcecode.numOfPaths);
     }
     @Test
     public void testCalcCountPath4(){
@@ -1204,7 +1203,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCountPath();
-        assertEquals(109 , sourcecode.countPath);
+        assertEquals(109 , sourcecode.numOfPaths);
     }
     @Test
     public void testCalcCountPath5(){
@@ -1260,7 +1259,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcCountPath();
-        assertEquals(51 , sourcecode.countPath);
+        assertEquals(51 , sourcecode.numOfPaths);
     }
     @Test
     public void testCalcComplexity1(){
@@ -1551,7 +1550,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcExecStmt();
-        assertEquals(10 , sourcecode.execStmt);
+        assertEquals(10 , sourcecode.numOfStatements);
     }
     @Test
     public void testCalcExecStmt2(){
@@ -1586,7 +1585,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcExecStmt();
-        assertEquals(11 , sourcecode.execStmt);
+        assertEquals(11 , sourcecode.numOfStatements);
     }
     @Test
     public void testCalcExecStmt3(){
@@ -1627,7 +1626,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcExecStmt();
-        assertEquals(13 , sourcecode.execStmt);
+        assertEquals(13 , sourcecode.numOfStatements);
     }
 
     @Test
@@ -1701,7 +1700,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcMaxNesting();
-        assertEquals(8 , sourcecode.maxNesting);
+        assertEquals(8 , sourcecode.maxOfNesting);
     }
     @Test
     public void testCalcMaxNesting2(){
@@ -1805,7 +1804,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcMaxNesting();
-        assertEquals(7 , sourcecode.maxNesting);
+        assertEquals(7 , sourcecode.maxOfNesting);
     }
     @Test
     public void testCalcMaxNesting3(){
@@ -1821,7 +1820,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcMaxNesting();
-        assertEquals(1 , sourcecode.maxNesting);
+        assertEquals(1 , sourcecode.maxOfNesting);
     }
     @Test
     public void testCalcMaxNesting4(){
@@ -1926,7 +1925,7 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcMaxNesting();
-        assertEquals(3 , sourcecode.maxNesting);
+        assertEquals(3 , sourcecode.maxOfNesting);
     }
     @Test
     public void testCalcMaxNesting5(){
@@ -2000,6 +1999,6 @@ public class TestSourcecode {
                 "}";
         sourcecode.calcCompilationUnit();
         sourcecode.calcMaxNesting();
-        assertEquals(3 , sourcecode.maxNesting);
+        assertEquals(3 , sourcecode.maxOfNesting);
     }
 }

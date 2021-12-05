@@ -14,10 +14,4 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestModule {
     public TestModule() throws IOException {
     }
-    @Test
-    public void testCalcIsBuggy_True_(){
-    }
-    @Test
-    public void testCalcIsBuggy_False_(){
-    }
 }

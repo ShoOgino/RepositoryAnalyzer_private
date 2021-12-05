@@ -1,89 +1,56 @@
 package data;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class People extends TreeMap<String, Person> {
-    private final TreeMap<String, Person> people = new TreeMap<>();
-    /*
-    public void analyze(Commits commitsAll) {
-        for(Commit commit: commitsAll.values()){
-            if(!people.containsKey(commit.author)){
-                people.put(commit.author, commit.author);
-            }
+    private final LinkedHashMap<String, Person> people = new LinkedHashMap<>();
+
+    public void analyzeAuthors(Commits commitsAll){
+        Set<String> authors = commitsAll.values().stream().map(item->item.author).collect(Collectors.toSet());
+        for(String author: authors){
+            people.put(author, new Person(author));
         }
     }
-     */
-
-    public void giveNumberToPerson(){
-        int index = 2;
-        for (Person person: people.values()) {
-            person.num=index;
-            index+=1;
-            person.numOfPeopleAll = people.size()+2;
-        }
+    public int getIdOfAuthor(String author) {
+        List<String> namesAuthor = new ArrayList<>(people.keySet());
+        return namesAuthor.indexOf(author);
     }
 
-    @Override
-    public int size() {
+    @Override public int size() {
         return people.size();
     }
-
-    @Override
-    public boolean isEmpty() {
+    @Override public boolean isEmpty() {
         return people.isEmpty();
     }
-
-    @Override
-    public boolean containsKey(Object key) {
+    @Override public boolean containsKey(Object key) {
         return people.containsKey(key);
     }
-
-    @Override
-    public boolean containsValue(Object value) {
+    @Override public boolean containsValue(Object value) {
         return people.containsValue(value);
     }
-
-    @Override
-    public Person get(Object key) {
+    @Override public Person get(Object key) {
         return people.get(key);
     }
-
-    @Override
-    public Person put(String key, Person value) {
+    @Override public Person put(String key, Person value) {
         return people.put(key, value);
     }
-
-    @Override
-    public Person remove(Object key) {
+    @Override public Person remove(Object key) {
         return people.remove(key);
     }
-
-    @Override
-    public void putAll(Map<? extends String, ? extends Person> m) {
+    @Override public void putAll(Map<? extends String, ? extends Person> m) {
         people.putAll(m);
     }
-
-    @Override
-    public void clear() {
+    @Override public void clear() {
         people.clear();
     }
-
-    @Override
-    public Set<String> keySet() {
+    @Override public Set<String> keySet() {
         return people.keySet();
     }
-
-    @Override
-    public Collection<Person> values() {
+    @Override public Collection<Person> values() {
         return people.values();
     }
-
-    @Override
-    public Set<Map.Entry<String, Person>> entrySet() {
+    @Override public Set<Map.Entry<String, Person>> entrySet() {
         return people.entrySet();
     }
-
 }

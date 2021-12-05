@@ -3,8 +3,6 @@ package data;
 import ast.*;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import misc.DoubleConverter;
-import net.sf.jsefa.csv.annotation.CsvField;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.dom.*;
 
@@ -17,39 +15,30 @@ public class Sourcecode {
     @JsonIgnore public CompilationUnit compilationUnit = null;
     public NodeAST4Experiment astRoot = null;
     public int countASTNode = 0;
-    //code metrics(Bug Prediction Based on Fine-Grained Module Histories)
-    int fanIn = 0;
-    int fanOut = 0;
-    int parameters = 0;
-    int localVar = 0;
-    double commentRatio = 0;
-    long countPath = 0;
-    int complexity = 0;
-    int execStmt = 0;
-    int maxNesting = 0;
-    //codeMetrics(Re-evaluating Method-Level Bug Prediction)
-    int LOC = 0;
-
-    public Sourcecode(){}
-    public Sourcecode(String rawdata) {
-        this.rawdata = rawdata;
-        calcCompilationUnit();
+    int numOfLines = 0;
+    public void calcNumOfLines(){
+        this.numOfLines = rawdata.split("\n").length;
     }
+    int fanin = 0;
+    int fanout = 0;
     public void calcFanOut() {
         VisitorFanout visitor = new VisitorFanout();
         compilationUnit.accept(visitor);
-        this.fanOut = visitor.fanout;
+        this.fanout = visitor.fanout;
     }
+    int numOfParameters = 0;
     public void calcParameters() {
         data.VisitorMethodDeclaration visitorMethodDeclaration = new data.VisitorMethodDeclaration();
         compilationUnit.accept(visitorMethodDeclaration);
-        this.parameters = visitorMethodDeclaration.parameters;
+        this.numOfParameters = visitorMethodDeclaration.parameters;
     }
+    int numOfVariablesLocal = 0;
     public void calcLocalVar() {
         VisitorLocalVar visitorLocalVar = new VisitorLocalVar();
         compilationUnit.accept(visitorLocalVar);
-        this.localVar = visitorLocalVar.NOVariables;
+        this.numOfVariablesLocal = visitorLocalVar.NOVariables;
     }
+    double ratioOfLinesComment = 0;
     public void calcCommentRatio() {
         String regex = "\n|\r\n";
         String[] linesMethod = this.rawdata.split(regex, 0);
@@ -71,8 +60,9 @@ public class Sourcecode {
                 countLineComment++;
             }
         }
-        this.commentRatio =  (float) countLineComment / (float) countLineCode;
+        this.ratioOfLinesComment =  (float) countLineComment / (float) countLineCode;
     }
+    long numOfPaths = 0;
     public void calcCountPath() {
         VisitorCountPath visitorCountPath = new VisitorCountPath();
         compilationUnit.accept(visitorCountPath);
@@ -80,25 +70,31 @@ public class Sourcecode {
         for (int branch : visitorCountPath.branches) {
             countPath *= branch;
         }
-        this.countPath =  countPath;
+        this.numOfPaths =  countPath;
     }
+    int complexity = 0;
     public void calcComplexity() {
         VisitorComplexity visitorComplexity = new VisitorComplexity();
         compilationUnit.accept(visitorComplexity);
         this.complexity = visitorComplexity.complexity;
     }
+    int numOfStatements = 0;
     public void calcExecStmt() {
         VisitorExecStmt visitorExecStmt = new VisitorExecStmt();
         compilationUnit.accept(visitorExecStmt);
-        this.execStmt =  visitorExecStmt.execStmt;
+        this.numOfStatements =  visitorExecStmt.execStmt;
     }
+    int maxOfNesting = 0;
     public void calcMaxNesting() {
         VisitorMaxNesting visitorMaxNesting = new VisitorMaxNesting();
         compilationUnit.accept(visitorMaxNesting);
-        this.maxNesting = visitorMaxNesting.maxNesting;
+        this.maxOfNesting = visitorMaxNesting.maxNesting;
     }
-    public void calcLOC(){
-        this.LOC = rawdata.split("\n").length;
+
+    public Sourcecode(){}
+    public Sourcecode(String rawdata) {
+        this.rawdata = rawdata;
+        calcCompilationUnit();
     }
     public void calcCompilationUnit() {
         String sourceClass = "public class Dummy{" + this.rawdata + "}";

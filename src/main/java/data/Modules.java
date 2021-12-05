@@ -35,14 +35,20 @@ import static util.RepositoryUtil.checkoutRepository;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Modules implements Map<String, Module> {
-    HashMap<String, Module> modules = new HashMap<>();
+    LinkedHashMap<String, Module> modules = new LinkedHashMap<>();
 
-    public void analyzeAllModules(Commits commits) {
+
+    public int getIdModule(String pathNew) {
+        List<String> paths = new ArrayList<>(modules.keySet());
+        return paths.indexOf(pathNew);
+    }
+    public void analyzeAllModules(Commits commits, Bugs bugsAll) {
         identifyChangesOnModule(commits);
         analyzeDevelopmentHistoryOnModule(commits);
         completeDevelopmentHistoryOnModule();
+        embedInformationBugInHistoryOnModule(bugsAll);
     }
-    public void identifyChangesOnModule(Commits commits) {
+    private void identifyChangesOnModule(Commits commits) {
         for (Commit commit : ProgressBar.wrap(commits.values(), "identifyChangeOnModules")) {
             for (CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()) {
                 for (CommitOnModule commitOnModule : commitsOnModule.values()) {
@@ -56,36 +62,36 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-    public void putChangeOnModule(CommitOnModule commitOnModule, String pathModule) {
+    private void putChangeOnModule(CommitOnModule commitOnModule, String pathModule) {
         if (!modules.containsKey(pathModule)) {
             Module module = new Module(pathModule);
             modules.put(pathModule, module);
         }
-        modules.get(pathModule).commitsOnModule.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
+        modules.get(pathModule).commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
     }
-    public void analyzeDevelopmentHistoryOnModule(Commits commits) {
+    private void analyzeDevelopmentHistoryOnModule(Commits commits) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "identifyCommitsParent")) {
             Module moduleTarget = modules.get(pathModule);
-            Queue<CommitOnModule> modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModule().values());
+            Queue<CommitOnModule> modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModuleAll().values());
 
             CommitOnModule commitOnModuleTarget;
             while (0 < modificationsTarget.size()) {
                 commitOnModuleTarget = modificationsTarget.poll();
-                moduleTarget.commitsOnModule.put(commitOnModuleTarget.idCommitParent, commitOnModuleTarget.idCommit, commitOnModuleTarget.pathOld, commitOnModuleTarget.pathNew, commitOnModuleTarget);
+                moduleTarget.commitsOnModuleAll.put(commitOnModuleTarget.idCommitParent, commitOnModuleTarget.idCommit, commitOnModuleTarget.pathOld, commitOnModuleTarget.pathNew, commitOnModuleTarget);
                 if (commitOnModuleTarget.type.equals("ADD")) {//親が存在しない。
                 } else {//親が存在する。
                     if (!commitOnModuleTarget.parents.isEmpty()) {//親特定済み
                         CommitsOnModule commitsOnModule = new CommitsOnModule();
                         commitOnModuleTarget.loadAncestors(commitsOnModule);
                         for (Entry<MultiKey<? extends String>, CommitOnModule> m : commitsOnModule.entrySet()) {
-                            moduleTarget.commitsOnModule.put(m.getKey(), m.getValue());
+                            moduleTarget.commitsOnModuleAll.put(m.getKey(), m.getValue());
                         }
                         continue;
                     }
                     Set<String> idsCommitTarget = new HashSet<>();
                     Module moduleBefore = modules.get(commitOnModuleTarget.pathNewParent);
                     if (moduleBefore != null)
-                        idsCommitTarget.addAll(moduleBefore.commitsOnModule.values().stream().map(a -> a.idCommit).collect(Collectors.toList()));
+                        idsCommitTarget.addAll(moduleBefore.commitsOnModuleAll.values().stream().map(a -> a.idCommit).collect(Collectors.toList()));
 
                     Commit commitNow = commits.get(commitOnModuleTarget.idCommitParent);
                     while (true) {
@@ -112,27 +118,45 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-    public void completeDevelopmentHistoryOnModule() {
+    private void completeDevelopmentHistoryOnModule() {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "completeCommitHistory")) {
             Module moduleTarget = modules.get(pathModule);
-            Queue<CommitOnModule> modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModule().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
+            Queue<CommitOnModule> modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModuleAll().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
             CommitOnModule commitOnModuleTarget;
             while (0 < modificationsTarget.size()) {//過去方向
                 commitOnModuleTarget = modificationsTarget.poll();
                 for (CommitOnModule commitOnModule : commitOnModuleTarget.parents.values()) {
-                    moduleTarget.commitsOnModule.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
-                    if (!moduleTarget.commitsOnModule.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
+                    moduleTarget.commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
+                    if (!moduleTarget.commitsOnModuleAll.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
                         modificationsTarget.add(commitOnModule);
                     }
                 }
             }
-            modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModule().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
+            modificationsTarget = new ArrayDeque<>(moduleTarget.getCommitsOnModuleAll().values().stream().filter(a -> Objects.equals(a.type, "RENAME") | Objects.equals(a.type, "COPY")).collect(Collectors.toList()));
             while (0 < modificationsTarget.size()) {//未来方向
                 commitOnModuleTarget = modificationsTarget.poll();
                 for (CommitOnModule commitOnModule : commitOnModuleTarget.children.values()) {
-                    moduleTarget.commitsOnModule.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
-                    if (!moduleTarget.commitsOnModule.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
+                    moduleTarget.commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
+                    if (!moduleTarget.commitsOnModuleAll.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
                         modificationsTarget.add(commitOnModule);
+                    }
+                }
+            }
+        }
+    }
+    private void embedInformationBugInHistoryOnModule(Bugs bugsAll) {
+        for(String idBug: bugsAll.keySet()){
+            Bug bug = bugsAll.get(idBug);
+            for(BugAtomic bugAtomic: bug.bugAtomics){
+                if(Objects.equals(bugAtomic.path,"/dev/null")) continue;
+                Module module = modules.get(bugAtomic.path);
+                for(CommitOnModule commitOnModule: module.commitsOnModuleAll.queryByIdCommit(bugAtomic.idCommitFix)){
+                    commitOnModule.IdsCommitsInducingBugsThatThisCommitFixes.addAll(bugAtomic.idsCommitInduce);
+                    commitOnModule.IdsBugThatThisCommitFixing.add(bug.id);
+                }
+                for(String idCommitInduce: bugAtomic.idsCommitInduce){
+                    for(CommitOnModule commitOnModule: module.commitsOnModuleAll.queryByIdCommit(idCommitInduce)){
+                        commitOnModule.IdsCommitsFixingBugThatThisCommitInduces.add(bugAtomic.idCommitFix);
                     }
                 }
             }
@@ -147,32 +171,28 @@ public class Modules implements Map<String, Module> {
             treeWalk.setRecursive(true);
             treeWalk.setFilter(PathSuffixFilter.create(".mjava"));
             while (treeWalk.next()) {
-                //System.out.println(treeWalk.getPathString());
                 pathSources.add(treeWalk.getPathString());
             }
         }
         for (String pathSource : ProgressBar.wrap(pathSources, "identifyTargetModules")) {
-            //Module module = new Module(pathSource);
             Module moduleTarget = modulesAll.get(pathSource).clone();
-            if (!pathSource.contains("test")
-            ){
+            if (!pathSource.contains("test")){
                 modules.put(pathSource, moduleTarget);
             }
-            //if(!pathSource.contains("test") & 0<commitsInInterval.size()) modules.put(pathSource, moduleTarget);
         }
     }
-    public void calculateAST(Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
+    public void calculateAST(Repository repositoryMethod, String revisionMethodTarget)  {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateAST")) {
             Module module = modules.get(pathModule);
             module.calcAST();
         }
     }
-    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) throws IOException {
+    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, People authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics)  {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateCommitGraph")) {
             long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
             module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            module.calcCommitGraph(commitsAll, modulesAll, intervalRevisionMethod_referableCalculatingProcessMetrics, bugsAll);
+            module.calcCommitGraph(commitsAll, modulesAll, authors);
             long endTimeOverall = System.currentTimeMillis();
             if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
                 System.out.println(pathModule);
@@ -185,8 +205,8 @@ public class Modules implements Map<String, Module> {
         checkoutRepository(repositoryFile, revisionFileTarget);
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcCodeMetrics")) {
             Module module = modules.get(pathModule);
-            //codemetrics(Re-evaluating Method-Level Bug Prediction)
             module.identifySourcecodeTarget(repositoryMethod, revisionMethodTarget);
+            module.calcLOC();
             module.calcFanOut();
             module.calcParameters();
             module.calcLocalVar();
@@ -195,9 +215,8 @@ public class Modules implements Map<String, Module> {
             module.calcComplexity();
             module.calcExecStmt();
             module.calcMaxNesting();
-            //codeMetrics(Bug Prediction Based on Fine-Grained Module Histories)
-            //module.calcLOC();
         }
+        //fanInを計測
         try {
             String pathRepositoryFile = repositoryFile.getDirectory().getParentFile().getAbsolutePath();
             System.out.println("calculating FanIn...");
@@ -219,98 +238,49 @@ public class Modules implements Map<String, Module> {
             String[] keys = new String[]{""};
             RequesterFanIn requesterFanIn = new RequesterFanIn(modules);
             parser.createASTs(sources, null, keys, requesterFanIn, new NullProgressMonitor());
-            //int countCalledMethod = 0;
             for (String idMethodCalled : ProgressBar.wrap(requesterFanIn.methodsCalled, "processMethodCalled")) {
                 if (idMethodCalled == null) continue;
-                //countCalledMethod++;
                 boolean flag = false;
                 for (String pathMethod : modules.keySet()) {
                     String idMethod = modules.get(pathMethod).id;
                     if (Objects.equals(idMethod, idMethodCalled)) {
-                        modules.get(pathMethod).sourcecode.fanIn++;
+                        modules.get(pathMethod).sourcecode.fanin++;
                         //flag=true;
                         break;
                     }
                 }
-                //if(!flag)System.out.println(idMethodCalled);
             }
             System.out.println("FanIn caluculated");
         }catch(Exception exception){
             exception.printStackTrace();
         }
     }
-    public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+    public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, People authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        calculateCommitGraph(commitsAll, modulesAll, authors, intervalRevisionMethod_referableCalculatingProcessMetrics);
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcProcessMetrics")) {
-            long startTimeOverall = System.currentTimeMillis();
             Module module = modules.get(pathModule);
-            //process metrics(Re-evaluating Method-Level Bug Prediction)
             module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            if(module.commitGraph==null)continue;
-            module.calcModuleHistories();
-            module.calcAuthors();
-            module.calcSumStmtAdded();
-            module.calcMaxStmtAdded();
-            module.calcAvgStmtAdded();
-            module.calcSumStmtDeleted();
-            module.calcMaxStmtDeleted();
-            module.calcAvgStmtDeleted();
-            module.calcSumChurn();
-            module.calcMaxChurn();
-            module.calcAvgChurn();
-            module.calcSumDecl();
-            module.calcSumCond();
-            module.calcSumElseAdded();
-            module.calcSumElseDeleted();
-            /*
-            //processMetrics(Bug Prediction Based on Fine-Grained Module Histories)
-            module.calcAddLOC();
-            module.calcDelLOC();
-            module.calcDevMinor();
-            module.calcDevMajor();
-            module.calcOwnership();
-            //long startTimeFixChgNum = System.currentTimeMillis();
-            module.calcFixChgNum(commitsAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            //long endTimeFixChgNum = System.currentTimeMillis();
-            //System.out.println("calcFixChgNum：" + (endTimeFixChgNum - startTimeFixChgNum)/(1000) + " s");
-
-            //long startTimePastBugNum = System.currentTimeMillis();
-            module.calcPastBugNum(commitsAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            //long endTimePastBugNum = System.currentTimeMillis();
-            //System.out.println("pastBugNum：" + (endTimePastBugNum - startTimePastBugNum)/(1000) + " s");
-
-            //long startTimeBugIntroNum = System.currentTimeMillis();
-            module.calcBugIntroNum();
-            //long endTimeBugIntroNum = System.currentTimeMillis();
-            //System.out.println("bugIntroNum：" + (endTimeBugIntroNum - startTimeBugIntroNum)/(1000) + " s");
-
-            //long startTimeLogCoupNum = System.currentTimeMillis();
-            module.calcLogCoupNum();
-            //long endTimeLogCoupNum = System.currentTimeMillis();
-            //System.out.println("pastLogCoupNum：" + (endTimeLogCoupNum - startTimeLogCoupNum)/(1000) + " s");
-
-            module.calcPeriod(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            module.calcAvgInterval(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            module.calcMaxInterval();
-            module.calcMinInterval();
-
-            long endTimeOverall = System.currentTimeMillis();
-            if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
-                System.out.println(pathModule);
-                System.out.println("処理時間：" + (endTimeOverall - startTimeOverall)/(1000) + " s");
-            }
-             */
+            module.calcNumOfCommits();
+            module.calcNumOfCommittersUnique();
+            module.calcSumOfAdditionsStatement();
+            module.calcMaxOfAdditionsStatement();
+            module.calcAvgOfAdditionsStatement();
+            module.calcSumOfDeletionsStatement();
+            module.calcMaxOfDeletionsStatement();
+            module.calcAvgOfDeletionsStatement();
+            module.calcSumOfChurnsStatement();
+            module.calcMaxOfChurnsStatement();
+            module.calcAvgOfChurnsStatement();
+            module.calcSumOfChangesDeclaration();
+            module.calcSumOfChangesCondition();
+            module.calcSumOfAdditionStatementElse();
+            module.calcSumOfDeletionStatementElse();
         }
     }
-    public void calculateIsBuggy(Commits commitsAll, String revisionMethodTarget, String[] intervalRevisionMethod_referableCalculatingIsBuggy, Bugs bugsAll) {
+    public void calculateIsBuggy(int dateTarget, int[] intervalDate_referableCalculatingIsBuggy) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateIsBuggy")) {
             Module module = modules.get(pathModule);
-            module.calcIsBuggy(commitsAll, bugsAll, revisionMethodTarget, intervalRevisionMethod_referableCalculatingIsBuggy);
-        }
-    }
-    public void calculateHasBeenBuggy(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, Bugs bugsAll) {
-        for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateHasBeenBuggy")) {
-            Module module = modules.get(pathModule);
-            module.calcHasBeenBuggy(commitsAll, bugsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+            module.calcIsBuggy(dateTarget, intervalDate_referableCalculatingIsBuggy);
         }
     }
     public void saveAsJson(String pathModules) {

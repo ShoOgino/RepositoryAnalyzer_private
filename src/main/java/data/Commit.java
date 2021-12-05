@@ -11,11 +11,10 @@ public class Commit {
 	public String id = null;
 	public Integer date = null;
 	public String author = null;
+	public String message = null;
 	public boolean isMerge = false;
 	public Map<String, CommitsOnModule> idParent2Modifications = new HashMap<>();
 	public String idParentMaster = null;
-	List<String> pathsHasBeenBuggy = new ArrayList<>();
-	List<String> pathsBugIntroduced = new ArrayList<>();
 	public Commit() {
 	}
 

@@ -71,7 +71,6 @@ public class Bugs implements Map<String, Bug>{
     }
 
 
-
     @Override public int size() {
         return bugs.size();
     }

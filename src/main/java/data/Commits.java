@@ -21,46 +21,6 @@ import static util.FileUtil.readFile;
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Commits implements Map<String, Commit> {
     private final TreeMap<String, Commit> commits = new TreeMap<>();
-
-    public void embedBugInfo(Bugs bugsAll, Modules modulesAll) {
-        //それぞれのパスについて、一番過去のdateBugIntroducedを特定して、path2dateBugIntroOldestに保存。
-        Map<String, Integer> path2dateBugIntroOldest = new HashMap<>();
-        for(String module: modulesAll.keySet()){
-            path2dateBugIntroOldest.put(module, Integer.MAX_VALUE);
-        }
-        for(Bug bug: bugsAll.values()){
-            for(BugAtomic bugAtomic: bug.bugAtomics){
-                int dateFix = commits.get(bugAtomic.idCommitFix).date;
-                path2dateBugIntroOldest.replace(bugAtomic.path, dateFix);
-                for(String idCommitInduce: bugAtomic.idsCommitInduce) {
-                    int dateIntro = commits.get(idCommitInduce).date;
-                    if (path2dateBugIntroOldest.get(bugAtomic.path) != null
-                            && dateIntro < path2dateBugIntroOldest.get(bugAtomic.path)) {
-                        path2dateBugIntroOldest.replace(bugAtomic.path, dateIntro);
-                    }
-                }
-            }
-        }
-        //それぞれのコミットで変更されているパスについて、path2dateBugIntroOldestより後ならpathsHasBeenBuggyに追加。
-        for(Commit commit: commits.values()){
-            for(CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()){
-                for(CommitOnModule commitOnModule : commitsOnModule.values()){
-                    if(Objects.equals(commitOnModule.type, "ADD"))continue;
-                    if(commitOnModule.date<path2dateBugIntroOldest.get(commitOnModule.pathOld)){
-                        commit.pathsHasBeenBuggy.add(commitOnModule.pathOld);
-                    }
-                }
-            }
-        }
-        //それぞれのバグのそれぞれのパスについて、introコミットのpathsBugIntroducedリストにそのパスを追加。
-        for(Bug bug: bugsAll.values()) {
-            for (BugAtomic bugAtomic : bug.bugAtomics) {
-                for(String idCommitInduce: bugAtomic.idsCommitInduce) {
-                    commits.get(idCommitInduce).pathsBugIntroduced.add(bugAtomic.path);
-                }
-            }
-        }
-    }
     public void loadCommitsFromRepository(Repository repository, String pathCommits){
         List<RevCommit> commitsAll = new ArrayList<>();
         Collection<Ref> allRefs = repository.getAllRefs().values();

@@ -36,12 +36,12 @@ public class Tasks {
         }else{
             numOfProcesses4Tasks = 1;
         }
-        //タスクをプロジェクトごとに実行。
-        // まずプロジェクトを分析→そのプロジェクトについてのメトリクス算出タスクへ。
+        //タスクを対象プロジェクトごとに実行。
+        //まず対象プロジェクトを分析 → メトリクス算出タスクへ。
         for(String pathProject: pathProject2Tasks.keySet()){
             List<Task> tasksOfTheProject = pathProject2Tasks.get(pathProject);
 
-            //プロジェクトのコミット情報、モジュール情報を分析するタスクを実行
+            //プロジェクト情報(コミット情報、モジュール情報)を分析するタスクを実行
             Task taskToAnalyzeProject = new Task();
             taskToAnalyzeProject.name = "analyzeProject";
             taskToAnalyzeProject.pathProject = pathProject;
@@ -49,12 +49,12 @@ public class Tasks {
             taskToAnalyzeProject.product = Arrays.asList("commit", "module", "bug");
             taskToAnalyzeProject.call();
 
-            //算出されたプロジェクト情報を他のタスクに付与する
+            //プロジェクト情報を他のタスクに参照させる
             for(Task task: tasksOfTheProject){
                 task.inheritDataOnProject(taskToAnalyzeProject);
             }
 
-            //優先度が同じグループのタスクをやっていく
+            //優先度が高いものから、タスクを実行
             Map<Integer, List<Task>> priority2Tasks = tasksOfTheProject.stream().collect(Collectors.groupingBy(e->e.priority));
             List<Future<String>> resultList = null;
             for(Integer priority: priority2Tasks.keySet().stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList())){

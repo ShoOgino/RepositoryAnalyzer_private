@@ -12,325 +12,176 @@ import java.util.stream.Collectors;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class CommitsOnModule {
-    @JsonDeserialize(keyUsing = DeserializerModification.class) private final MultiKeyMap<String, CommitOnModule> CommitsOnModule = new MultiKeyMap<>();
-    //processMetrics(Re-evaluating Method-Level Bug Prediction)
-    public int numOfCommits = 0;
-    int authors = 0;
-    int sumStmtAdded = 0;
-    int maxStmtAdded = 0;
-    double avgStmtAdded = 0;
-    int sumStmtDeleted = 0;
-    int maxStmtDeleted = 0;
-    double avgStmtDeleted = 0;
-    int sumChurn = 0;
-    int maxChurn = 0;
-    double avgChurn = 0;
-    int sumDecl = 0;
-    int sumCond = 0;
-    int sumElseAdded = 0;
-    int sumElseDeleted = 0;
-    //process metrics(Bug Prediction Based on Fine-Grained Module Histories)
-    int sumAddLOC = 0;
-    int sumDelLOC = 0;
-    int devMinor = 0;
-    int devMajor = 0;
-    double ownership = 0;
-    int period = 0;
-    double avgInterval = 0;
-    int maxInterval = 0;
-    int minInterval = 0;
-    int numOfCommitsOtherModulesHasBeenBuggyOnTheCommit=0;
-    int numOfCommitsOtherModulesGetBuggyOnTheCommit = 0;
-
-    //全体メトリクス
-    public void calcModuleHistories() {
-        for(CommitOnModule commitOnModule: CommitsOnModule.values()){
-            if(commitOnModule.isMerge)continue;
-            this.numOfCommits++;
+public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> implements Cloneable{
+    @JsonDeserialize(keyUsing = DeserializerModification.class) private final MultiKeyMap<String, CommitOnModule> commitsOnModule = new MultiKeyMap<>();
+    // future metrics
+    int isBuggy = 0;
+    public void calcIsBuggy(int dateTarget, int[] intervalDate_referableCalculatingIsBuggy) {
+        for(CommitOnModule commitOnModuleFixing: commitsOnModule.values()){
+            for(String idCommitInducingBugsThatThisCommitFixes: commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes){
+                CommitOnModule commitOnModuleInducing = queryByIdCommit(idCommitInducingBugsThatThisCommitFixes).get(0);
+                if(commitOnModuleInducing.date<dateTarget & dateTarget<commitOnModuleFixing.date & commitOnModuleFixing.date<intervalDate_referableCalculatingIsBuggy[1]){
+                    this.isBuggy=1;
+                    return;
+                }
+            }
         }
     }
-    public void calcAuthors() {
+    int getBuggy = 0;
+    public void calcGetBuggy(){}
+    // past metrics
+    int numOfCommits = 0;
+    public void calcNumOfCommits() {
+        int numOfCommitsTemp = 0;
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            if(commitOnModule.isMerge)continue;
+            numOfCommitsTemp++;
+        }
+        this.numOfCommits = numOfCommitsTemp;
+    }
+    int numOfCommitsFixingBugs = 0;
+    public void calcNumOfCommitsFixingBugs() {
+        int numOfCommitsFixingBugsTemp = 0;
+        for(CommitOnModule commitOnModuleFixing: commitsOnModule.values()) {
+            if(0<commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes.size()) {
+                numOfCommitsFixingBugsTemp+=1;
+            }
+        }
+        this.numOfCommitsFixingBugs = numOfCommitsFixingBugsTemp;
+    }
+    int numOfBugreportsFixed = 0;
+    public void calcNumOfBugreportsUnique() {
+        Set<String> idsBugreports = new HashSet<String>();
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            idsBugreports.addAll(commitOnModule.IdsBugThatThisCommitFixing);
+        }
+        numOfBugreportsFixed = idsBugreports.size();
+    }
+    int numOfCommitsInducingBugs = 0;
+    public void calcNumOfCommitsInducingBugs(){
+        int numOfCommitsInducingBugsTemp = 0;
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            commitOnModule.calcIsInduce(commitsOnModule.values().stream().map(item->item.idCommit).collect(Collectors.toList()));
+            if(commitOnModule.isInduce)numOfCommitsInducingBugsTemp++;
+        }
+        numOfCommitsInducingBugs = numOfCommitsInducingBugsTemp;
+    }
+    int numOfCommitsOtherModulesHasBeenBuggyOnTheCommit=0;
+    public void calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(Commits commitsAll, Modules modulesAll) {
+        int numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp = 0;
+        for(CommitOnModule commitOnModule: this.commitsOnModule.values()){
+            commitOnModule.calcNumOfModulesHasBeenBuggyOnTheCommit(commitsAll, modulesAll);
+            if(0<commitOnModule.numOfModulesHasBeenBuggyOnTheCommit){
+                numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp++;
+            }
+        }
+        this.numOfCommitsOtherModulesHasBeenBuggyOnTheCommit = numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp;
+    }
+    int numOfCommitsOtherModulesGetBuggyOnTheCommit = 0;
+    public void calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(Commits commitsAll) {
+        int numOfCommitsOtherModulesGetBuggyOnTheCommitTemp = 0;
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            commitOnModule.calcNumOfModulesGetBuggyOnTheCommit(commitsAll);
+            if(0<commitOnModule.numOfModulesGetBuggyOnTheCommit){
+                numOfCommitsOtherModulesGetBuggyOnTheCommitTemp++;
+            }
+        }
+        this.numOfCommitsOtherModulesGetBuggyOnTheCommit = numOfCommitsOtherModulesGetBuggyOnTheCommitTemp;
+    }
+    int numOfCommittersUnique = 0;
+    public void calcNumOfCommittersUnique() {
         Set<String> setAuthors = new HashSet<>();
-        for(CommitOnModule commitOnModule: CommitsOnModule.values()){
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
             if(commitOnModule.isMerge)continue;
             setAuthors.add(commitOnModule.author);
         }
-        this.authors = setAuthors.size();
+        this.numOfCommittersUnique = setAuthors.size();
     }
-    public void calcSumStmtAdded() {
-        int sumStmtAddedTemp = 0;
-        for (CommitOnModule commitOnModule: CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcStmtAdded();
-            sumStmtAddedTemp+=commitOnModule.stmtAdded;
-        }
-        this.sumStmtAdded = sumStmtAddedTemp;
-    }
-    public void calcMaxStmtAdded() {
-        int maxStmtAddedTemp = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge) continue;
-            commitOnModule.calcStmtAdded();
-            if (maxStmtAddedTemp < commitOnModule.stmtAdded) {
-                maxStmtAddedTemp = commitOnModule.stmtAdded;
-            }
-        }
-        this.maxStmtAdded = maxStmtAddedTemp;
-    }
-    public void calcAvgStmtAdded() {
-        calcSumStmtAdded();
-        calcModuleHistories();
-        if (numOfCommits == 0) this.avgStmtAdded = 0;
-        else this.avgStmtAdded = this.sumStmtAdded / (double) numOfCommits;
-    }
-    public void calcSumStmtDeleted() {
-        int sumStmtDeletedTemp = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcStmtDeleted();
-            sumStmtDeletedTemp+=commitOnModule.stmtDeleted;
-        }
-        this.sumStmtDeleted = sumStmtDeletedTemp;
-    }
-    public void calcMaxStmtDeleted() {
-        int maxStmtDeleted = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcStmtDeleted();
-            if (maxStmtDeleted < commitOnModule.stmtDeleted) {
-                maxStmtDeleted = commitOnModule.stmtDeleted;
-            }
-        }
-        this.maxStmtDeleted = maxStmtDeleted;
-    }
-    public void calcAvgStmtDeleted() {
-        calcSumStmtDeleted();
-        calcModuleHistories();
-        if (numOfCommits == 0) this.avgStmtDeleted = 0;
-        else this.avgStmtDeleted = this.sumStmtDeleted / (double) this.numOfCommits;
-    }
-    public void calcSumChurn() {
-        int sumChurn = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcChurn();
-            sumChurn+=commitOnModule.churn;
-        }
-        this.sumChurn = sumChurn;
-    }
-    public void calcMaxChurn() {
-        int maxChurn = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcChurn();
-            if (maxChurn < commitOnModule.churn) maxChurn = commitOnModule.churn;
-        }
-        this.maxChurn = maxChurn;
-    }
-    public void calcAvgChurn() {
-        calcSumChurn();
-        calcModuleHistories();
-        if (this.numOfCommits == 0) this.avgChurn = 0;
-        else this.avgChurn = sumChurn / (float) numOfCommits;
-    }
-    public void calcSumElseAdded() {
-        int sumElseAdded = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcElseAdded();
-            sumElseAdded+=commitOnModule.elseAdded;
-        }
-        this.sumElseAdded = sumElseAdded;
-    }
-    public void calcSumElseDeleted() {
-        int sumElseDeleted = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcElseDeleted();
-            sumElseDeleted+=commitOnModule.elseDeleted;
-        }
-        this.sumElseDeleted = sumElseDeleted;
-    }
-    public void calcSumDecl() {
-        int sumDeclTemp = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcDecl();
-            sumDeclTemp+=commitOnModule.decl;
-        }
-        this.sumDecl = sumDeclTemp;
-    }
-    public void calcSumCond() {
-        int sumCondTemp = 0;
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcCond();
-            sumCondTemp+=commitOnModule.cond;
-        }
-        this.sumCond = sumCondTemp;
-    }
-    /*
-    public void calcAddLOC() {
-        int addLOC = 0;
-        for (CommitOnModule commitOnModule : modifications.values()) {
-            if(commitOnModule.isMerge)continue;
-            addLOC += commitOnModule.calcNOAddedLines();
-        }
-        this.addLOC = addLOC;
-    }
-    public void calcDelLOC() {
-        int delLOC = 0;
-        for (CommitOnModule commitOnModule : parentsFlatten) {
-            if(commitOnModule.isMerge)continue;
-            delLOC += commitOnModule.calcNODeletedLines();
-        }
-        this.delLOC = delLOC;
-    }
-    public void calcDevMinor() {
+    int numOfCommittersMinor = 0;
+    public void calcNumOfCommittersMinor() {
         Set<String> setAuthors = new HashSet<>();
-        parentsFlatten.forEach(item -> setAuthors.add(item.author));
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            if(commitOnModule.isMerge)continue;
+            setAuthors.add(commitOnModule.author);
+        }
 
-        int devMinor = 0;
+        int numOfCommittersMinorTemp = 0;
         for (String nameAuthor : setAuthors) {
-            int count = (int) parentsFlatten.stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
-            if ( ( count / (float) parentsFlatten.size() ) < 0.2) {
-                devMinor++;
+            int count = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)&!item.isMerge).count();
+            double ownership =  count / (float) commitsOnModule.values().stream().filter(item -> !item.isMerge).count();
+            if ( ownership < 0.2) {
+                numOfCommittersMinorTemp++;
             }
         }
-        this.devMinor = devMinor;
+        this.numOfCommittersMinor = numOfCommittersMinorTemp;
     }
-    public void calcDevMajor() {
+    int numOfCommittersMajor = 0;
+    public void calcNumOfCommittersMajor() {
         Set<String> setAuthors = new HashSet<>();
-        parentsFlatten.forEach(item -> setAuthors.add(item.author));
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            if(commitOnModule.isMerge)continue;
+            setAuthors.add(commitOnModule.author);
+        }
 
-        int devMajor = 0;
+        int numOfCommittersMajorTemp = 0;
         for (String nameAuthor : setAuthors) {
-            int count = (int) parentsFlatten.stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
-            if (0.2 < count / (float) parentsFlatten.size()) {
-                devMajor++;
+            int count = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)&!item.isMerge).count();
+            double ownership =  count / (float) commitsOnModule.values().stream().filter(item -> !item.isMerge).count();
+            if ( 0.2 <= ownership) {
+                numOfCommittersMajorTemp++;
             }
         }
-        this.devMajor = devMajor;
+        this.numOfCommittersMajor = numOfCommittersMajorTemp;
     }
+    double ownership = 0;
     public void calcOwnership() {
         Set<String> setAuthors = new HashSet<>();
-        parentsFlatten.forEach(item -> setAuthors.add(item.author));
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            if(commitOnModule.isMerge)continue;
+            setAuthors.add(commitOnModule.author);
+        }
 
+        int numOfCommittersMajorTemp = 0;
         for (String nameAuthor : setAuthors) {
-            int count = (int) parentsFlatten.stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
-            double ownership = count / (float) parentsFlatten.size();
-            if (this.ownership < ownership) {
-                this.ownership = ownership;
+            int count = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor) & !item.isMerge).count();
+            double ownershipTemp = count / (float) commitsOnModule.values().stream().filter(item -> !item.isMerge).count();
+            if (this.ownership < ownershipTemp) {
+                this.ownership = ownershipTemp;
             }
         }
     }
-    public void calcFixChgNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        Set<String> paths = new HashSet<>();
-        for(CommitOnModule CommitOnModule : parentsFlatten){
-            if(!Objects.equals(CommitOnModule.pathNew, "/dev/null"))paths.add(CommitOnModule.pathNew);
-            if(!Objects.equals(CommitOnModule.pathOld, "/dev/null"))paths.add(CommitOnModule.pathOld);
-        }
-        Set<String> commitsFixingBugs = new HashSet<>();
-        for(String path: paths) {
-            List<BugAtomic> bugAtomics = bugsAll.identifyAtomicBugs(path);
-            for (BugAtomic bugAtomic : bugAtomics) {
-                int dateBegin = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[0]).date;
-                int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                int dateEnd = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-                if (dateBegin <= dateCommitFix & dateCommitFix <= dateEnd) {
-                    commitsFixingBugs.add(bugAtomic.idCommitFix);
-                }
+    int period = 0;
+    public void calcPeriod(Commits commitsAll , int dateUntil) {
+        int dateFrom = Integer.MAX_VALUE;
+        for (CommitOnModule CommitOnModule : commitsOnModule.values()) {
+            if (CommitOnModule.date < dateFrom) {
+                dateFrom = CommitOnModule.date;
             }
         }
-        this.fixChgNum = commitsFixingBugs.size();
+        this.period = (dateUntil - dateFrom) / (60 * 60 * 24);
     }
-    public void calcPastBugNum(Commits commitsAll, Bugs bugsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        Set<String> paths = new HashSet<>();
-        for(CommitOnModule CommitOnModule : parentsFlatten){
-            if(!Objects.equals(CommitOnModule.pathNew, "/dev/null"))paths.add(CommitOnModule.pathNew);
-            if(!Objects.equals(CommitOnModule.pathOld, "/dev/null"))paths.add(CommitOnModule.pathOld);
-        }
-        for(String path: paths) {
-            List<Bug> bugs = bugsAll.identifyBug(path);
-            for (Bug bug : bugs) {
-                for (BugAtomic bugAtomic : bug.bugAtomics) {
-                    if(Objects.equals(bugAtomic.path, path)){
-                        int dateCommitFix = commitsAll.get(bugAtomic.idCommitFix).date;
-                        int dateTarget = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-                        if (dateCommitFix < dateTarget) {
-                            this.pastBugNum++;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    public void calcBugIntroNum() {
-		Set<String> pathsPast = parentsFlatten.stream().map(a -> a.pathNew).collect(Collectors.toSet());
-		for(CommitOnModule CommitOnModule : parentsFlatten) {
-            for(String pathBugIntroduced :.pathsBugIntroduced){
-                if(!pathsPast.contains(pathBugIntroduced)){
-                    this.bugIntroNum += 1;
-                    break;
-                }
-            }
-		}
-    }
-    public void calcLogCoupNum() {
-        Set<String> pathsPast = changesOnModule.values().stream().map(a -> a.pathNew).collect(Collectors.toSet());
-        for(ChangeOnModule changeOnModule: changesOnModuleInInterval) {
-            for(String pathHasBeenBuggy :.pathsHasBeenBuggy){
-                if(!pathsPast.contains(pathHasBeenBuggy)){
-                    this.logCoupNum += 1;
-                    break;
-                }
-            }
-        }
-    }
-    public void calcPeriod(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        int periodFrom = Integer.MAX_VALUE;
-        int periodTo = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]).date;
-        for (CommitOnModule CommitOnModule : parentsFlatten) {
-            if (CommitOnModule.date < periodFrom) {
-                periodFrom = CommitOnModule.date;
-            }
-        }
-        this.period = (periodTo - periodFrom) / (60 * 60 * 24);
-    }
-    public void calcAvgInterval() {
-        int sumInterval = 0;
-        List<CommitOnModule> commitOnModulesSorted = parentsFlatten.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
-        if (commitOnModulesSorted.size() <= 1) {
-            this.avgInterval = 0;
-            return;
-        }
-        for (int i = 0; i < commitOnModulesSorted.size() - 1; i++) {
-            sumInterval += commitOnModulesSorted.get(i + 1).date - commitOnModulesSorted.get(i).date;
-        }
-        this.avgInterval = (sumInterval / (float) (commitOnModulesSorted.size()-1))/(60 * 60 * 24 * 7);
-    }
-    public void calcMaxInterval() {
-        int maxInterval = 0;
-        List<CommitOnModule> commitOnModules = parentsFlatten.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
+    int maxOfInterval = 0;
+    public void calcMaxOfInterval() {
+        int maxOfIntervalTemp = 0;
+        List<CommitOnModule> commitOnModules = commitsOnModule.values().stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
         if (commitOnModules.size() < 2) {
-            this.maxInterval = 0;
+            this.maxOfInterval = 0;
             return;
         }
         for (int i = 0; i < commitOnModules.size() - 1; i++) {
             int interval = commitOnModules.get(i + 1).date - commitOnModules.get(i).date;
-            if (maxInterval < interval) {
-                maxInterval = interval;
+            if (maxOfIntervalTemp < interval) {
+                maxOfIntervalTemp = interval;
             }
         }
-        this.maxInterval = maxInterval / (60 * 60 * 24 * 7);
+        this.maxOfInterval = maxOfIntervalTemp / (60 * 60 * 24 * 7);
     }
-    public void calcMinInterval() {
+    int minOfInterval = 0;
+    public void calcMinOfInterval() {
         int minInterval = Integer.MAX_VALUE;
-        List<CommitOnModule> commitOnModules = parentsFlatten.stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
+        List<CommitOnModule> commitOnModules = commitsOnModule.values().stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
         if (commitOnModules.size() < 2) {
-            this.minInterval = 0;
+            this.minOfInterval = 0;
             return;
         }
         for (int i = 0; i < commitOnModules.size() - 1; i++) {
@@ -339,398 +190,225 @@ public class CommitsOnModule {
                 minInterval = interval;
             }
         }
-        this.minInterval = minInterval / (60 * 60 * 24 * 7);
+        this.minOfInterval = minInterval / (60 * 60 * 24 * 7);
     }
-    */
-    public void setMetricsOnEachNode() {
-        for (CommitOnModule commitOnModule : CommitsOnModule.values()) {
+    double avgOfInterval = 0;
+    public void calcAvgOfInterval() {
+        int sumInterval = 0;
+        List<CommitOnModule> commitOnModulesSorted = commitsOnModule.values().stream().sorted(Comparator.comparingInt(a -> a.date)).collect(Collectors.toList());
+        if (commitOnModulesSorted.size() <= 1) {
+            this.avgOfInterval = 0;
+            return;
+        }
+        for (int i = 0; i < commitOnModulesSorted.size() - 1; i++) {
+            sumInterval += commitOnModulesSorted.get(i + 1).date - commitOnModulesSorted.get(i).date;
+        }
+        this.avgOfInterval = (sumInterval / (float) (commitOnModulesSorted.size()-1))/(60 * 60 * 24 * 7);
+    }
+    int sumOfAdditionsLine = 0;
+    public void calcSumOfAdditionsLine() {
+        int sumOfAdditionsLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfAdditionsLine();
+            sumOfAdditionsLineTemp += commitOnModule.numOfAdditionsLine;
+        }
+        this.sumOfAdditionsLine = sumOfAdditionsLineTemp;
+    }
+    int sumOfDeletionsLine = 0;
+    public void calcSumOfDeletionsLine() {
+        int sumOfDeletionsLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfDeletionsLine();
+            sumOfDeletionsLineTemp+=commitOnModule.numOfDeletionsLine;
+        }
+        this.sumOfDeletionsLine = sumOfDeletionsLineTemp;
+    }
+    int sumOfAdditionsStatement = 0;
+    public void calcSumOfAdditionsStatement() {
+        int sumStmtAddedTemp = 0;
+        for (CommitOnModule commitOnModule: commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfAdditionsStatement();
+            sumStmtAddedTemp+=commitOnModule.numOfAdditionsStatement;
+        }
+        this.sumOfAdditionsStatement = sumStmtAddedTemp;
+    }
+    int maxOfAdditionsStatement = 0;
+    public void calcMaxOfAdditionsStatement() {
+        int maxStmtAddedTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge) continue;
+            commitOnModule.calcNumOfAdditionsStatement();
+            if (maxStmtAddedTemp < commitOnModule.numOfAdditionsStatement) {
+                maxStmtAddedTemp = commitOnModule.numOfAdditionsStatement;
+            }
+        }
+        this.maxOfAdditionsStatement = maxStmtAddedTemp;
+    }
+    double avgOfAdditionsStatement = 0;
+    public void calcAvgOfAdditionsStatement() {
+        calcSumOfAdditionsStatement();
+        calcNumOfCommits();
+        if (numOfCommits == 0) this.avgOfAdditionsStatement = 0;
+        else this.avgOfAdditionsStatement = this.sumOfAdditionsStatement / (double) numOfCommits;
+    }
+    int sumOfDeletionsStatement = 0;
+    public void calcSumOfDeletionsStatement() {
+        int sumStmtDeletedTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfDeletionsStatement();
+            sumStmtDeletedTemp+=commitOnModule.numOfDeletionsStatement;
+        }
+        this.sumOfDeletionsStatement = sumStmtDeletedTemp;
+    }
+    int maxOfDeletionsStatement = 0;
+    public void calcMaxOfDeletionsStatement() {
+        int maxStmtDeleted = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfDeletionsStatement();
+            if (maxStmtDeleted < commitOnModule.numOfDeletionsStatement) {
+                maxStmtDeleted = commitOnModule.numOfDeletionsStatement;
+            }
+        }
+        this.maxOfDeletionsStatement = maxStmtDeleted;
+    }
+    double avgOfDeletionsStatement = 0;
+    public void calcAvgOfDeletionsStatement() {
+        calcSumOfDeletionsStatement();
+        calcNumOfCommits();
+        if (numOfCommits == 0) this.avgOfDeletionsStatement = 0;
+        else this.avgOfDeletionsStatement = this.sumOfDeletionsStatement / (double) this.numOfCommits;
+    }
+    int sumOfChurnsStatement = 0;
+    public void calcSumOfChurnsStatement() {
+        int sumChurn = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfChurnsStatement();
+            sumChurn+=commitOnModule.numOfChurnsStatement;
+        }
+        this.sumOfChurnsStatement = sumChurn;
+    }
+    int maxOfChurnsStatement = 0;
+    public void calcMaxOfChurnsStatement() {
+        int maxChurn = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfChurnsStatement();
+            if (maxChurn < commitOnModule.numOfChurnsStatement) maxChurn = commitOnModule.numOfChurnsStatement;
+        }
+        this.maxOfChurnsStatement = maxChurn;
+    }
+    double avgOfChurnsStatement = 0;
+    public void calcAvgOfChurnsStatement() {
+        calcSumOfChurnsStatement();
+        calcNumOfCommits();
+        if (this.numOfCommits == 0) this.avgOfChurnsStatement = 0;
+        else this.avgOfChurnsStatement = sumOfChurnsStatement / (float) numOfCommits;
+    }
+    int sumOfChangesDeclaration = 0;
+    public void calcSumOfChangesDeclaration() {
+        int sumDeclTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfChangesDeclaration();
+            sumDeclTemp+=commitOnModule.numOfChangesDeclaration;
+        }
+        this.sumOfChangesDeclaration = sumDeclTemp;
+    }
+    int sumOfChangesCondition = 0;
+    public void calcSumOfChangesCondition() {
+        int sumCondTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfChangesCondition();
+            sumCondTemp+=commitOnModule.numOfChangesCondition;
+        }
+        this.sumOfChangesCondition = sumCondTemp;
+    }
+    int sumOfAdditionStatementElse = 0;
+    public void calcSumOfAdditionStatementElse() {
+        int sumElseAdded = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfAdditionsStatementElse();
+            sumElseAdded+=commitOnModule.numOfAdditionsStatementElse;
+        }
+        this.sumOfAdditionStatementElse = sumElseAdded;
+    }
+    int sumOfDeletionStatementElse = 0;
+    public void calcSumOfDeletionStatementElse() {
+        int sumElseDeleted = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if(commitOnModule.isMerge)continue;
+            commitOnModule.calcNumOfDeletionsStatementElse();
+            sumElseDeleted+=commitOnModule.numOfDeletionsStatementElse;
+        }
+        this.sumOfDeletionStatementElse = sumElseDeleted;
+    }
+
+
+
+    public List<CommitOnModule> queryByIdCommit(String idCommit){
+        return commitsOnModule.values().stream().filter(a->a.idCommit.equals(idCommit)).collect(Collectors.toList());
+    }
+    @Override public CommitsOnModule clone() {
+        CommitsOnModule commitsOnModule = null;
+        try {
+            commitsOnModule = (CommitsOnModule) super.clone();
+        } catch (Exception e) {
+            commitsOnModule = null;
+        }
+        return commitsOnModule;
+    }
+    public void calcMetricsOnEachNode() {
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcMetrics();
         }
     }
-	/*
-	public void calcVectorSemanticType(){
-		JdtTreeGenerator jdtTreeGenerator = new JdtTreeGenerator();
-		String sourcePrev = "public class Test{" + commitOnModule.sourceOld + "}";
-		String sourceCurrent = "public class Test{" + commitOnModule.sourceNew + "}";
-		ITree iTreePrev = jdtTreeGenerator.generateFrom().string(sourcePrev).getRoot();
-		ITree iTreeCurrent = jdtTreeGenerator.generateFrom().string(sourceCurrent).getRoot();
-		com.github.gumtreediff.matchers.Matcher defaultMatcher = Matchers.getInstance().getMatcher();
-		MappingStore mappings = defaultMatcher.match(iTreePrev, iTreeCurrent);
-		EditScriptGenerator editScriptGenerator = new SimplifiedChawatheScriptGenerator();
-		EditScript actions = editScriptGenerator.computeActions(mappings);
-		for(Action action: actions) {
-			int index = 0;
-			switch (action.getNode().getType().name) {
-				case "AnonymousClassDeclaration":
-					index = 0;
-					break;
-				case "ArrayAccess":
-					index = 1;
-					break;
-				case "ArrayCreation":
-					index = 2;
-					break;
-				case "ArrayInitializer":
-					index = 3;
-					break;
-				case "ArrayType":
-					index = 4;
-					break;
-				case "AssertStatement":
-					index = 5;
-					break;
-				case "Assignment":
-					index = 6;
-					break;
-				case "Block":
-					index = 7;
-					break;
-				case "BooleanLiteral":
-					index = 8;
-					break;
-				case "BreakStatement":
-					index = 9;
-					break;
-				case "CastExpression":
-					index = 10;
-					break;
-				case "CatchClause":
-					index = 11;
-					break;
-				case "CharacterLiteral":
-					index = 12;
-					break;
-				case "ClassInstanceCreation":
-					index = 13;
-					break;
-				case "CompilationUnit":
-					index = 14;
-					break;
-				case "ConditionalExpression":
-					index = 15;
-					break;
-				case "ConstructorInvocation":
-					index = 16;
-					break;
-				case "ContinueStatement":
-					index = 17;
-					break;
-				case "DoStatement":
-					index = 18;
-					break;
-				case "EmptyStatement":
-					index = 19;
-					break;
-				case "ExpressionStatement":
-					index = 20;
-					break;
-				case "FieldAccess":
-					index = 21;
-					break;
-				case "FieldDeclaration":
-					index = 22;
-					break;
-				case "ForStatement":
-					index = 23;
-					break;
-				case "IfStatement":
-					index = 24;
-					break;
-				case "ImportDeclaration":
-					index = 25;
-					break;
-				case "InfixExpression":
-					index = 26;
-					break;
-				case "Initializer":
-					index = 27;
-					break;
-				case "Javadoc":
-					index = 28;
-					break;
-				case "LabeledStatement":
-					index = 29;
-					break;
-				case "MethodDeclaration":
-					index = 30;
-					break;
-				case "MethodInvocation":
-					index = 31;
-					break;
-				case "NullLiteral":
-					index = 32;
-					break;
-				case "NumberLiteral":
-					index = 33;
-					break;
-				case "PackageDeclaration":
-					index = 34;
-					break;
-				case "ParenthesizedExpression":
-					index = 35;
-					break;
-				case "PostfixExpression":
-					index = 36;
-					break;
-				case "PrefixExpression":
-					index = 37;
-					break;
-				case "PrimitiveType":
-					index = 38;
-					break;
-				case "QualifiedName":
-					index = 39;
-					break;
-				case "ReturnStatement":
-					index = 40;
-					break;
-				case "SimpleName":
-					index = 41;
-					break;
-				case "SimpleType":
-					index = 42;
-					break;
-				case "SingleVariableDeclaration":
-					index = 43;
-					break;
-				case "StringLiteral":
-					index = 44;
-					break;
-				case "SuperConstructorInvocation":
-					index = 45;
-					break;
-				case "SuperFieldAccess":
-					index = 46;
-					break;
-				case "SuperMethodInvocation":
-					index = 47;
-					break;
-				case "SwitchCase":
-					index = 48;
-					break;
-				case "SwitchStatement":
-					index = 49;
-					break;
-				case "SynchronizedStatement":
-					index = 50;
-					break;
-				case "ThisExpression":
-					index = 51;
-					break;
-				case "ThrowStatement":
-					index = 52;
-					break;
-				case "TryStatement":
-					index = 53;
-					break;
-				case "TypeDeclaration":
-					index = 54;
-					break;
-				case "TypeDeclarationStatement":
-					index = 55;
-					break;
-				case "TypeLiteral":
-					index = 56;
-					break;
-				case "VariableDeclarationExpression":
-					index = 57;
-					break;
-				case "VariableDeclarationFragment":
-					index = 58;
-					break;
-				case "VariableDeclarationStatement":
-					index = 59;
-					break;
-				case "WhileStatement":
-					index = 60;
-					break;
-				case "InstanceofExpression":
-					index = 61;
-					break;
-				case "LineComment":
-					index = 62;
-					break;
-				case "BlockComment":
-					index = 63;
-					break;
-				case "TagElement":
-					index = 64;
-					break;
-				case "TextElement":
-					index = 65;
-					break;
-				case "MemberRef":
-					index = 66;
-					break;
-				case "MethodRef":
-					index = 67;
-					break;
-				case "MethodRefParameter":
-					index = 68;
-					break;
-				case "EnhancedForStatement":
-					index = 69;
-					break;
-				case "EnumDeclaration":
-					index = 70;
-					break;
-				case "EnumConstantDeclaration":
-					index = 71;
-					break;
-				case "TypeParameter":
-					index = 72;
-					break;
-				case "ParameterizedType":
-					index = 73;
-					break;
-				case "QualifiedType":
-					index = 74;
-					break;
-				case "WildcardType":
-					index = 75;
-					break;
-				case "NormalAnnotation":
-					index = 76;
-					break;
-				case "MarkerAnnotation":
-					index = 77;
-					break;
-				case "SingleMemberAnnotation":
-					index = 78;
-					break;
-				case "MemberValuePair":
-					index = 79;
-					break;
-				case "AnnotationTypeDeclaration":
-					index = 80;
-					break;
-				case "AnnotationTypeMemberDeclaration":
-					index = 81;
-					break;
-				case "Modifier":
-					index = 82;
-					break;
-				case "UnionType":
-					index = 83;
-					break;
-				case "Dimension":
-					index = 84;
-					break;
-				case "LambdaExpression":
-					index = 85;
-					break;
-				case "IntersectionType":
-					index = 86;
-					break;
-				case "NameQualifiedType":
-					index = 87;
-					break;
-				case "CreationReference":
-					index = 88;
-					break;
-				case "ExpressionMethodReference":
-					index = 89;
-					break;
-				case "SuperMethhodReference":
-					index = 90;
-					break;
-				case "TypeMethodReference":
-					index = 91;
-					break;
-				case "INFIX_EXPRESSION_OPERATOR":
-					index = 92;
-					break;
-				case "METHOD_INVOCATION_RECEIVER":
-					index = 93;
-					break;
-				case "METHOD_INVOCATION_ARGUMENTS":
-					index = 94;
-					break;
-				case "TYPE_DECLARATION_KIND":
-					index = 95;
-					break;
-				case "ASSIGNEMENT_OPERATOR":
-					index = 96;
-					break;
-				case "PREFIX_EXPRESSION_OPERATOR":
-					index = 97;
-					break;
-				case "POSTFIX_EXPRESSION_OPERATOR":
-					index = 98;
-					break;
-				default:
-					System.out.println(action.getNode().getType().name);
-			}
-			if (action.getName().contains("insert")) {
-			} else if (action.getName().contains("update")) {
-				index += 99 * 1;
-			} else if (action.getName().contains("move")) {
-				index += 99 * 2;
-			} else if (action.getName().contains("delete")) {
-				index += 99 * 3;
-			}
-			nodeCommit4Experiment.semantics[index]++;
-		}
-	}
-	public void calcVectorAuthor(){
-		nodeCommit4Experiment.author = commitsAll.get(commitOnModule.idCommit).author;
-	}
-	public void calcVectorInterval() {
-		int interval = 0;
-		for (CommitOnModule commitOnModuleParent : commitOnModule.parents.values()) {
-			interval += (commitOnModule.date - commitOnModuleParent.date) / (60 * 60 * 24);
-		}
-		nodeCommit4Experiment.interval = interval;
-	}
-	public void calcVectorCodeChurn() {
-		nodeCommit4Experiment.churn[0] = commitOnModule.calcNOAddedLines();
-		nodeCommit4Experiment.churn[1] = commitOnModule.calcNODeletedLines();
-		nodeCommit4Experiment.churn[2] = nodeCommit4Experiment.churn[0] - nodeCommit4Experiment.churn[1];
-	}
-	public void calcVectorCoChange() {
-		for (CommitOnModule changeOnModuleCoCommit : commitsAll.get(commitOnModule.idCommit).idParent2Modifications.get(commitOnModule.idCommitParent).values()) {
-			//pathOld
-			if (!Objects.equals(changeOnModuleCoCommit.pathOld, "/dev/null")) {
-				nodeCommit4Experiment.coupling.add(changeOnModuleCoCommit.pathOld);
-			}
-			//pathNew
-			if (Objects.equals(changeOnModuleCoCommit.pathNew, "/dev/null")) {
-				nodeCommit4Experiment.coupling.add(changeOnModuleCoCommit.pathNew);
-			}
-		}
-	}
-	 */
-
-
+    public void calcVectorsOnEachNode(Commits commitsAll, Modules modulesAll, People authors) {
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcVectors(commitsAll, modulesAll, authors);
+        }
+    }
     public CommitOnModule get(String idCommitParent, String idCommit, String pathOld, String pathNew){
-        return CommitsOnModule.get(idCommitParent, idCommit, pathOld, pathNew);
+        return commitsOnModule.get(idCommitParent, idCommit, pathOld, pathNew);
     }
     public List<CommitOnModule> queryIdCommit(String idCommit) {
-        return CommitsOnModule.values().stream().filter(a->a.idCommit.equals(idCommit)).collect(Collectors.toList());
+        return commitsOnModule.values().stream().filter(a->a.idCommit.equals(idCommit)).collect(Collectors.toList());
     }
     public List<CommitOnModule> queryPathOld(String pathOld) {
-        return CommitsOnModule.values().stream().filter(a->a.pathOld.equals(pathOld)).collect(Collectors.toList());
+        return commitsOnModule.values().stream().filter(a->a.pathOld.equals(pathOld)).collect(Collectors.toList());
     }
     public List<CommitOnModule> queryPathNew(String pathNew) {
-        return CommitsOnModule.values().stream().filter(a->a.pathNew.equals(pathNew)).collect(Collectors.toList());
+        return commitsOnModule.values().stream().filter(a->a.pathNew.equals(pathNew)).collect(Collectors.toList());
     }
-    public void put(String idCommitParent, String idCommit, String pathOld, String pathNew, CommitOnModule commitOnModule){
-        CommitsOnModule.put(idCommitParent, idCommit, pathOld, pathNew, commitOnModule);
+
+    public CommitOnModule put(String idCommitParent, String idCommit, String pathOld, String pathNew, CommitOnModule commitOnModule){
+        commitsOnModule.put(idCommitParent, idCommit, pathOld, pathNew, commitOnModule);
+        return commitOnModule;
     }
     public void excludeCommitsOutOfInterval(int dateBegin, int dateEnd) {
-        CommitsOnModule.entrySet().removeIf(entry ->  entry.getValue().date<dateBegin | dateEnd<entry.getValue().date);
+        commitsOnModule.entrySet().removeIf(entry ->  entry.getValue().date<dateBegin | dateEnd<entry.getValue().date);
+    }
+    public void excludeCommitsMerge() {
+        commitsOnModule.entrySet().removeIf(entry -> entry.getValue().isMerge);
     }
     public CommitsOnModule(){}
-    public int size() { return CommitsOnModule.size(); }
-    public boolean isEmpty() { return CommitsOnModule.isEmpty(); }
-    public boolean containsKey(Object key) { return CommitsOnModule.containsKey(key); }
-    public boolean containsValue(Object value) { return CommitsOnModule.containsValue(value); }
-    public CommitOnModule get(Object key) { return CommitsOnModule.get(key); }
-    public CommitOnModule put(MultiKey<? extends String> key, CommitOnModule value) { return CommitsOnModule.put(key, value); }
-    public CommitOnModule remove(Object key) { return CommitsOnModule.remove(key); }
-    public void putAll(Map<? extends MultiKey<? extends String>, ? extends CommitOnModule> m) { CommitsOnModule.putAll(m); }
-    public void clear(){ CommitsOnModule.clear(); }
-    public Set<MultiKey<? extends String>> keySet() { return CommitsOnModule.keySet(); }
-    public Collection<CommitOnModule> values(){ return CommitsOnModule.values(); }
-    public Set<Map.Entry<MultiKey<? extends String>, CommitOnModule>> entrySet() { return CommitsOnModule.entrySet(); }
+    public int size() { return commitsOnModule.size(); }
+    public boolean isEmpty() { return commitsOnModule.isEmpty(); }
+    public boolean containsKey(Object key) { return commitsOnModule.containsKey(key); }
+    public boolean containsValue(Object value) { return commitsOnModule.containsValue(value); }
+    public CommitOnModule get(Object key) { return commitsOnModule.get(key); }
+    public CommitOnModule put(MultiKey<? extends String> key, CommitOnModule value) { return commitsOnModule.put(key, value); }
+    public CommitOnModule remove(Object key) { return commitsOnModule.remove(key); }
+    public void putAll(Map<? extends MultiKey<? extends String>, ? extends CommitOnModule> m) { commitsOnModule.putAll(m); }
+    public void clear(){ commitsOnModule.clear(); }
+    public Set<MultiKey<? extends String>> keySet() { return commitsOnModule.keySet(); }
+    public Collection<CommitOnModule> values(){ return commitsOnModule.values(); }
+    public Set<Map.Entry<MultiKey<? extends String>, CommitOnModule>> entrySet() { return commitsOnModule.entrySet(); }
 }

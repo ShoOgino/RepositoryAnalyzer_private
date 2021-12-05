@@ -34,6 +34,7 @@ public class CommitsThread  extends Thread{
                 //commit.date = (int)(authorIdent.getWhen().getTime()/1000);
                 commit.date = revCommit.getCommitTime();
                 commit.author = revCommit.getAuthorIdent().getName();
+                commit.message = revCommit.getFullMessage();
                 commit.isMerge = revCommit.getParentCount() > 1;
                 commit.idParentMaster = revCommit.getParentCount() == 0 ? "0000000000000000000000000000000000000000" : revCommit.getParent(0).getName();
                 if (revCommit.getParentCount() == 0) {
@@ -64,6 +65,7 @@ public class CommitsThread  extends Thread{
                                 m.date = revCommit.getCommitTime();
                                 m.author = revCommit.getAuthorIdent().getName();
                                 m.isMerge = revCommit.getParentCount() > 1;
+                                m.message = revCommit.getFullMessage();
                                 m.type = "UNCHANGE";
                                 m.pathOld = commitOnModule.pathNew;
                                 m.pathNew = commitOnModule.pathNew;
@@ -108,7 +110,7 @@ public class CommitsThread  extends Thread{
                 commitOnModule.author = revCommit.getAuthorIdent().getName();
                 commitOnModule.isMerge = revCommit.getParentCount() > 1;
                 commitOnModule.type = diffEntry.getChangeType().toString();
-
+                commitOnModule.message = revCommit.getFullMessage();
                 commitOnModule.pathOld = diffEntry.getOldPath();
                 commitOnModule.pathNew = diffEntry.getNewPath();
                 if (commitOnModule.type.equals("ADD") & commitOnModule.isMerge) commitOnModule.pathNewParent = diffEntry.getNewPath();
