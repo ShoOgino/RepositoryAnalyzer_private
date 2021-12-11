@@ -15,7 +15,7 @@ public class Tasks {
     @JsonProperty("tasks") List<Task> tasks = new ArrayList<>();
 
     public void execute() throws Exception {
-        //タスクをプロジェクトごとにまとめる。mapを使う。
+        //タスクをプロジェクトごとにまとめる。
         Map<String, List<Task>> pathProject2Tasks = new HashMap<>();
         for(Task task: tasks){
             if(pathProject2Tasks.containsKey(task.pathProject)){

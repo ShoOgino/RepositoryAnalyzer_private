@@ -96,6 +96,17 @@ public class Sourcecode {
         this.rawdata = rawdata;
         calcCompilationUnit();
     }
+    public void calcMetrics() {
+        calcNumOfLines();
+        calcFanOut();
+        calcParameters();
+        calcLocalVar();
+        calcCommentRatio();
+        calcCountPath();
+        calcComplexity();
+        calcExecStmt();
+        calcMaxNesting();
+    }
     public void calcCompilationUnit() {
         String sourceClass = "public class Dummy{" + this.rawdata + "}";
         ASTParser parser = ASTParser.newParser(org.eclipse.jdt.core.dom.AST.JLS14);
@@ -152,4 +163,5 @@ public class Sourcecode {
         }
         return children;
     }
+
 }

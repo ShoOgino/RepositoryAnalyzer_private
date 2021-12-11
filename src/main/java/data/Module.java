@@ -38,130 +38,21 @@ public class Module implements Cloneable {
         }
         return module;
     }
-
-    // future metrics
-    public void calcIsBuggy(int dateTarget, int[] intervalDate_referableCalculatingIsBuggy){
-        commitsOnModuleAll.calcIsBuggy(dateTarget, intervalDate_referableCalculatingIsBuggy);
+    public void calcMetricsCode(){
+        sourcecode.calcMetrics();
     }
-    // past metrics
-    //// code metrics
-    public void calcLOC() {
-        sourcecode.calcNumOfLines();
+    public void calcMetricsProcess1(Commits commitsAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture) {
+        int dateFrom_ReferableToCalculateMetricsIndependentOfFuture = commitsAll.get(intervalRevision_referableCalculatingMetricsIndependentOnFuture[0]).date;
+        int dateUntil_ReferableToCalculateMetricsIndependentOfFuture = commitsAll.get(intervalRevision_referableCalculatingMetricsIndependentOnFuture[1]).date;
+        int dateUntil_ReferableToCalculateMetricsDependentOfFuture =commitsAll.get(intervalRevision_referableCalculatingMetricsDependentOnFuture[1]).date;
+        commitsOnModuleAll.calcMetricsDependentOnFuture(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsDependentOfFuture);
+        commitsOnModuleInInterval.calcMetricsIndependentOnFuture1(commitsAll, dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
     }
-    public void calcFanOut(){
-        sourcecode.calcFanOut();
+    public void calcMetricsProcess2(Commits commitsAll, Modules modulesAll){
+        commitsOnModuleInInterval.calcMetricsIndependentOnFuture2(commitsAll, modulesAll);
     }
-    public void calcParameters(){
-        sourcecode.calcParameters();
-    }
-    public void calcLocalVar(){
-        sourcecode.calcLocalVar();
-    }
-    public void calcCommentRatio(){ sourcecode.calcCommentRatio();}
-    public void calcCountPath(){ sourcecode.calcCountPath();}
-    public void calcComplexity(){ sourcecode.calcComplexity();}
-    public void calcExecStmt(){ sourcecode.calcExecStmt();}
-    public void calcMaxNesting(){ sourcecode.calcMaxNesting();}
-    //// process metrics
-    public boolean calcHasBeenBuggy(int dateTarget){
-        for(CommitOnModule commitOnModule: commitsOnModuleAll.values()){
-            if(commitOnModule.date<dateTarget&&0<commitOnModule.IdsCommitsFixingBugThatThisCommitInduces.size()){
-                return true;
-            }
-        }
-        return false;
-    }
-    public void calcNumOfCommits() {
-        commitsOnModuleInInterval.calcNumOfCommits();
-    }
-    public void calcNumOfCommitsFixingBugs() {
-        commitsOnModuleInInterval.calcNumOfCommitsFixingBugs();
-    }
-    public void calcNumOfBugreportsUnique() {
-        commitsOnModuleInInterval.calcNumOfBugreportsUnique();
-    }
-    public void calcNumOfCommitsInducingBugs(){
-        commitsOnModuleInInterval.calcNumOfCommitsInducingBugs();
-    }
-    public void calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(Commits commitsAll, Modules modulesAll) {
-        commitsOnModuleInInterval.calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(commitsAll, modulesAll);
-    }
-    public void calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(Commits commitsAll) {
-        commitsOnModuleInInterval.calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(commitsAll);
-    }
-    public void calcNumOfCommittersUnique() {
-        commitsOnModuleInInterval.calcNumOfCommittersUnique();
-    }
-    public void calcNumOfCommittersMinor() {
-        commitsOnModuleInInterval.calcNumOfCommittersMinor();
-    }
-    public void calcNumOfCommittersMajor() {
-        commitsOnModuleInInterval.calcNumOfCommittersMajor();
-    }
-    public void calcOwnership() {
-        commitsOnModuleInInterval.calcOwnership();
-    }
-    public void calcPeriod(Commits commitsAll ,String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        Commit commit = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
-        commitsOnModuleInInterval.calcPeriod(commitsAll, commit.date);
-    }
-    public void calcMaxOfInterval() {
-        commitsOnModuleInInterval.calcMaxOfInterval();
-    }
-    public void calcMinOfInterval() {
-        commitsOnModuleInInterval.calcMinOfInterval();
-    }
-    public void calcAvgOfIntervalCommit() {
-        commitsOnModuleInInterval.calcAvgOfInterval();
-    }
-    public void calcSumOfLinesAdded() {
-        commitsOnModuleInInterval.calcSumOfAdditionsLine();
-    }
-    public void calcSumOfLinesDeleted() {
-        commitsOnModuleInInterval.calcSumOfDeletionsLine();
-    }
-    public void calcSumOfAdditionsStatement() {
-        commitsOnModuleInInterval.calcSumOfAdditionsStatement();
-    }
-    public void calcMaxOfAdditionsStatement() {
-        commitsOnModuleInInterval.calcMaxOfAdditionsStatement();
-    }
-    public void calcAvgOfAdditionsStatement() {
-        commitsOnModuleInInterval.calcAvgOfAdditionsStatement();
-    }
-    public void calcSumOfDeletionsStatement() {
-        commitsOnModuleInInterval.calcSumOfDeletionsStatement();
-    }
-    public void calcMaxOfDeletionsStatement() {
-        commitsOnModuleInInterval.calcMaxOfDeletionsStatement();
-    }
-    public void calcAvgOfDeletionsStatement() {
-        commitsOnModuleInInterval.calcAvgOfDeletionsStatement();
-    }
-    public void calcSumOfChurnsStatement() {
-        commitsOnModuleInInterval.calcSumOfChurnsStatement();
-    }
-    public void calcMaxOfChurnsStatement() {
-        commitsOnModuleInInterval.calcMaxOfChurnsStatement();
-    }
-    public void calcAvgOfChurnsStatement() {
-        commitsOnModuleInInterval.calcAvgOfChurnsStatement();
-    }
-    public void calcSumOfChangesDeclaration() {
-        commitsOnModuleInInterval.calcSumOfChangesDeclaration();
-    }
-    public void calcSumOfChangesCondition() {
-        commitsOnModuleInInterval.calcSumOfChangesCondition();
-    }
-    public void calcSumOfAdditionStatementElse() {
-        commitsOnModuleInInterval.calcSumOfAdditionStatementElse();
-    }
-    public void calcSumOfDeletionStatementElse() {
-        commitsOnModuleInInterval.calcSumOfDeletionStatementElse();
-    }
-
-    //others
     public void identifyCommitGraphTarget(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        if(commitsOnModuleInInterval.size()!=0) return;
         Commit commit = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
 
         //コミットグラフのheadを特定+その祖先をコミットグラフの要素として特定
@@ -199,7 +90,7 @@ public class Module implements Cloneable {
         }
     }
     public void calcAST() { sourcecode.calcAST(); }
-    public void calcCommitGraph(Commits commitsAll, Modules modulesAll, People authors) {
+    public void calcCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors) {
         commitsOnModuleInInterval.calcMetricsOnEachNode();
         commitsOnModuleInInterval.calcVectorsOnEachNode(commitsAll, modulesAll, authors);
     }
@@ -227,10 +118,11 @@ public class Module implements Cloneable {
                 commitsOnModuleInInterval.sumOfChurnsStatement + ", "+
                 commitsOnModuleInInterval.maxOfChurnsStatement + ", "+
                 commitsOnModuleInInterval.avgOfChurnsStatement + ", "+
-                commitsOnModuleInInterval.sumOfChangesDeclaration + ", "+
+                commitsOnModuleInInterval.sumOfChangesDeclarationItself + ", "+
                 commitsOnModuleInInterval.sumOfChangesCondition + ", "+
                 commitsOnModuleInInterval.sumOfAdditionStatementElse + ", "+
                 commitsOnModuleInInterval.sumOfDeletionStatementElse + ", " + "\n";
         return row;
     }
+
 }

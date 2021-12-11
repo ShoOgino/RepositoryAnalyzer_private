@@ -5,8 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestCommitOnModule {
-    @Test
-    public void testsCalcStmtAdded0(){
+    @Test public void testsCalcStmtAdded0(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode("");
         commitOnModule.sourceNew=new Sourcecode(
@@ -17,8 +16,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfAdditionsStatement();
         assertEquals(1, commitOnModule.numOfAdditionsStatement);
     }
-    @Test
-    public void testsCalcStmtAdded1(){
+    @Test public void testsCalcStmtAdded1(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcStmtAdded1(){\n" +
@@ -34,8 +32,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfAdditionsStatement();
         assertEquals(1, commitOnModule.numOfAdditionsStatement);
     }
-    @Test
-    public void testsCalcStmtAdded2(){
+    @Test public void testsCalcStmtAdded2(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcStmtAdded2(){\n" +
@@ -50,9 +47,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfAdditionsStatement();
         assertEquals(2, commitOnModule.numOfAdditionsStatement);
     }
-
-    @Test
-    public void testsCalcStmtDeleted1(){
+    @Test public void testsCalcStmtDeleted1(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcStmtDeleted1(){\n" +
@@ -68,8 +63,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfDeletionsStatement();
         assertEquals(1, commitOnModule.numOfDeletionsStatement);
     }
-    @Test
-    public void testsCalcStmtDeleted2(){
+    @Test public void testsCalcStmtDeleted2(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcStmtDeleted2(){\n" +
@@ -84,9 +78,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfDeletionsStatement();
         assertEquals(2, commitOnModule.numOfDeletionsStatement);
     }
-
-    @Test
-    public void testCalcChurn0(){
+    @Test public void testCalcChurn0(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcStmtDeleted1(){\n" +
@@ -106,8 +98,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfChurnsStatement();
         assertEquals(1, commitOnModule.numOfChurnsStatement);
     }
-    @Test
-    public void testCalcChurn1(){
+    @Test public void testCalcChurn1(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcChurn1(){\n" +
@@ -126,9 +117,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfChurnsStatement();
         assertEquals(0, commitOnModule.numOfChurnsStatement);
     }
-
-    @Test
-    public void testCalcElseAdded0(){
+    @Test public void testCalcElseAdded0(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcElseAdded0(){\n" +
@@ -144,8 +133,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfAdditionsStatementElse();
         assertEquals(1, commitOnModule.numOfAdditionsStatementElse);
     }
-    @Test
-    public void testCalcElseAdded1(){
+    @Test public void testCalcElseAdded1(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcElseAdded1(){\n" +
@@ -162,9 +150,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfAdditionsStatementElse();
         assertEquals(2, commitOnModule.numOfAdditionsStatementElse);
     }
-
-    @Test
-    public void testCalcElseDeleted0(){
+    @Test public void testCalcElseDeleted0(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcElseAdded0(){\n" +
@@ -180,9 +166,7 @@ public class TestCommitOnModule {
         commitOnModule.calcNumOfDeletionsStatementElse();
         assertEquals(1, commitOnModule.numOfDeletionsStatementElse);
     }
-
-    @Test
-    public void testCalcDecl0(){
+    @Test public void testCalcDecl0(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcElseAdded0(){\n" +
@@ -192,12 +176,10 @@ public class TestCommitOnModule {
                 "public void example4TestCalcElseAdded0(String example){\n" +
                         "}"
         );
-        commitOnModule.calcNumOfChangesDeclaration();
-        assertEquals(1, commitOnModule.numOfChangesDeclaration);
+        commitOnModule.calcNumOfChangesDeclarationItself();
+        assertEquals(1, commitOnModule.numOfChangesDeclarationItself);
     }
-
-    @Test
-    public void testCalcCond0(){
+    @Test public void testCalcCond0(){
         CommitOnModule commitOnModule = new CommitOnModule();
         commitOnModule.sourceOld=new Sourcecode(
                 "public void example4TestCalcCond0(){\n" +

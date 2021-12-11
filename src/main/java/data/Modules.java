@@ -7,11 +7,7 @@ import ast.RequesterFanIn;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import misc.DeserializerModification;
-import misc.DoubleConverter;
 import me.tongfei.progressbar.ProgressBar;
-import net.sf.jsefa.Serializer;
-import net.sf.jsefa.csv.CsvIOFactory;
-import net.sf.jsefa.csv.config.CsvConfiguration;
 import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.JavaCore;
@@ -23,21 +19,20 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
+import util.FileUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static util.FileUtil.findFiles;
+import static util.FileUtil.findPathsFile;
 import static util.FileUtil.readFile;
 import static util.RepositoryUtil.checkoutRepository;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Modules implements Map<String, Module> {
     LinkedHashMap<String, Module> modules = new LinkedHashMap<>();
-
-
     public int getIdModule(String pathNew) {
         List<String> paths = new ArrayList<>(modules.keySet());
         return paths.indexOf(pathNew);
@@ -187,42 +182,26 @@ public class Modules implements Map<String, Module> {
             module.calcAST();
         }
     }
-    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, People authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics)  {
-        for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateCommitGraph")) {
-            long startTimeOverall = System.currentTimeMillis();
-            Module module = modules.get(pathModule);
+    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics)  {
+        for (Module module : ProgressBar.wrap(modules.values(), "calculateCommitGraph")) {
             module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
             module.calcCommitGraph(commitsAll, modulesAll, authors);
-            long endTimeOverall = System.currentTimeMillis();
-            if(60*10<(endTimeOverall - startTimeOverall)/(1000)){
-                System.out.println(pathModule);
-                System.out.println("処理時間：" + (endTimeOverall - startTimeOverall)/(1000) + " s");
-            }
         }
-        System.out.println("");
     }
-    public void calculateCodeMetrics(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
+    public void calculateMetricsCode(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
         checkoutRepository(repositoryFile, revisionFileTarget);
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcCodeMetrics")) {
             Module module = modules.get(pathModule);
             module.identifySourcecodeTarget(repositoryMethod, revisionMethodTarget);
-            module.calcLOC();
-            module.calcFanOut();
-            module.calcParameters();
-            module.calcLocalVar();
-            module.calcCommentRatio();
-            module.calcCountPath();
-            module.calcComplexity();
-            module.calcExecStmt();
-            module.calcMaxNesting();
+            module.calcMetricsCode();
         }
         //fanInを計測
         try {
             String pathRepositoryFile = repositoryFile.getDirectory().getParentFile().getAbsolutePath();
             System.out.println("calculating FanIn...");
             final String[] sourcePathDirs = {};
-            final String[] libraries = findFiles(pathRepositoryFile, ".jar").toArray(new String[0]);
-            final String[] sources = findFiles(pathRepositoryFile, ".java").toArray(new String[0]);
+            final String[] libraries = FileUtil.findPathsFile(pathRepositoryFile, ".jar").toArray(new String[0]);
+            final String[] sources = FileUtil.findPathsFile(pathRepositoryFile, ".java").toArray(new String[0]);
 
             ASTParser parser = ASTParser.newParser(AST.JLS14);
             final Map<String, String> options = JavaCore.getOptions();
@@ -238,7 +217,7 @@ public class Modules implements Map<String, Module> {
             String[] keys = new String[]{""};
             RequesterFanIn requesterFanIn = new RequesterFanIn(modules);
             parser.createASTs(sources, null, keys, requesterFanIn, new NullProgressMonitor());
-            for (String idMethodCalled : ProgressBar.wrap(requesterFanIn.methodsCalled, "processMethodCalled")) {
+            for (String idMethodCalled : requesterFanIn.methodsCalled) {
                 if (idMethodCalled == null) continue;
                 boolean flag = false;
                 for (String pathMethod : modules.keySet()) {
@@ -255,32 +234,15 @@ public class Modules implements Map<String, Module> {
             exception.printStackTrace();
         }
     }
-    public void calculateProcessMetrics(Commits commitsAll, Modules modulesAll, People authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
-        calculateCommitGraph(commitsAll, modulesAll, authors, intervalRevisionMethod_referableCalculatingProcessMetrics);
-        for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcProcessMetrics")) {
-            Module module = modules.get(pathModule);
-            module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            module.calcNumOfCommits();
-            module.calcNumOfCommittersUnique();
-            module.calcSumOfAdditionsStatement();
-            module.calcMaxOfAdditionsStatement();
-            module.calcAvgOfAdditionsStatement();
-            module.calcSumOfDeletionsStatement();
-            module.calcMaxOfDeletionsStatement();
-            module.calcAvgOfDeletionsStatement();
-            module.calcSumOfChurnsStatement();
-            module.calcMaxOfChurnsStatement();
-            module.calcAvgOfChurnsStatement();
-            module.calcSumOfChangesDeclaration();
-            module.calcSumOfChangesCondition();
-            module.calcSumOfAdditionStatementElse();
-            module.calcSumOfDeletionStatementElse();
+    public void calculateMetricsProcess(Commits commitsAll, Modules modulesAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture) {
+        for (Module module : ProgressBar.wrap(modules.values(), "identifing commitGraph To calculate process metrics")) {
+            module.identifyCommitGraphTarget(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture);
         }
-    }
-    public void calculateIsBuggy(int dateTarget, int[] intervalDate_referableCalculatingIsBuggy) {
-        for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateIsBuggy")) {
-            Module module = modules.get(pathModule);
-            module.calcIsBuggy(dateTarget, intervalDate_referableCalculatingIsBuggy);
+        for (Module module : ProgressBar.wrap(modules.values(), "calcProcessMetrics1")) {
+            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture);
+        }
+        for (Module module : ProgressBar.wrap(modules.values(), "calcProcessMetrics2")) {
+            module.calcMetricsProcess2(commitsAll, modulesAll);
         }
     }
     public void saveAsJson(String pathModules) {
@@ -314,37 +276,14 @@ public class Modules implements Map<String, Module> {
 
         File file = new File(pathOutput);
         FileWriter fileWriter = new FileWriter(file);
+        fileWriter.write("");
         for(Module module: modules.values()){
             fileWriter.write(module.outputRow());
         }
         fileWriter.close();
     }
-    public void saveAsCSV_(String pathOutput) {
-        File dir = new File(pathOutput);
-        File dirParent = new File(dir.getParent());
-        dirParent.mkdirs();
-        try {
-            FileOutputStream fos = new FileOutputStream(pathOutput);
-            OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
-            BufferedWriter writer = new BufferedWriter(osw);
-            CsvConfiguration config = new CsvConfiguration();
-            config.setFieldDelimiter(',');
-            config.getSimpleTypeConverterProvider().registerConverterType(double.class, DoubleConverter.class);
-            Serializer serializer = CsvIOFactory.createFactory(config, Module.class).createSerializer();
-
-            serializer.open(writer);
-            for (String key : modules.keySet()) {
-                Module module = modules.get(key);
-                serializer.write(module);
-            }
-            serializer.close(true);
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     public void loadModulesFromFile(String pathModules) {
-        List<String> paths = findFiles(pathModules, ".json");
+        List<String> paths = FileUtil.findPathsFile(pathModules, ".json");
         for (String path : ProgressBar.wrap(paths, "loadModulesFromFile")) {
             try {
                 String strFile = readFile(path);

@@ -46,6 +46,12 @@ public class CommitOnModule {
 	public List<String> IdsCommitsInducingBugsThatThisCommitFixes = new ArrayList<>();
 	public List<String> IdsCommitsFixingBugThatThisCommitInduces = new ArrayList<>();
 	public List<String> IdsBugThatThisCommitFixing = new ArrayList<>();
+	public int numOfChangesStatement = 0;
+	public void calcNumOfChangesStatement() {
+		calcNumOfAdditionsStatement();
+		calcNumOfDeletionsStatement();
+		this.numOfChangesStatement=numOfAdditionsStatement+numOfDeletionsStatement;
+	}
 	//単体メトリクス
 	int numOfAdditionsLine = 0;
 	public void calcNumOfAdditionsLine(){
@@ -55,11 +61,18 @@ public class CommitOnModule {
 	public void calcNumOfDeletionsLine(){
 		this.numOfDeletionsLine = diffs.calcNODeletedLines();
 	}
-	int numOfChurnsLine = 0;
-	public void calcNumOfChurnsLine(){
+	int numOfChangesLine = 0;
+	public int calcNumOfChangesLine(){
 		calcNumOfAdditionsLine();
 		calcNumOfDeletionsLine();
-		this.numOfChurnsLine = this.numOfAdditionsLine - this.numOfDeletionsLine;
+		numOfChangesLine = numOfAdditionsLine+numOfDeletionsLine;
+		return numOfChangesLine;
+	}
+	int numOfChurnLine = 0;
+	public void calcNumOfChurnLine(){
+		calcNumOfAdditionsLine();
+		calcNumOfDeletionsLine();
+		this.numOfChurnLine = this.numOfAdditionsLine - this.numOfDeletionsLine;
 	}
 	int numOfAdditionsStatement = 0;
 	public void calcNumOfAdditionsStatement(){
@@ -85,8 +98,8 @@ public class CommitOnModule {
 		calcNumOfDeletionsStatement();
 		this.numOfChurnsStatement = this.numOfAdditionsStatement -this.numOfDeletionsStatement;
 	}
-	int numOfChangesDeclaration = 0;
-	public void calcNumOfChangesDeclaration() {
+	int numOfChangesDeclarationItself = 0;
+	public void calcNumOfChangesDeclarationItself() {
 		int declTemp = 0;
 		List<ChangeType> ctdecl = Arrays.asList(
 				ChangeType.METHOD_RENAMING,
@@ -105,7 +118,7 @@ public class CommitOnModule {
 			EntityType et = change.getChangedEntity().getType();
 			if (ctdecl.contains(change.getChangeType())) declTemp++;
 		}
-		this.numOfChangesDeclaration = declTemp;
+		this.numOfChangesDeclarationItself = declTemp;
 	}
 	int numOfChangesCondition = 0;
 	public void calcNumOfChangesCondition() {
@@ -144,6 +157,7 @@ public class CommitOnModule {
 		this.isFix = (0<this.IdsCommitsInducingBugsThatThisCommitFixes.size());
 	}
 	boolean isInduce = false;
+	boolean isRefactoring = false;
 	public void calcIsInduce(List<String> idsCommitReferenced){
 		for(String idCommit:this.IdsCommitsFixingBugThatThisCommitInduces){
 			if (idsCommitReferenced.contains(idCommit)) {
@@ -158,7 +172,8 @@ public class CommitOnModule {
 		Commit commit = commitsAll.get(this.idCommit);
 		CommitsOnModule commitsOnModuleInTheCommit = commit.idParent2Modifications.get(commit.idParentMaster);
 		for(CommitOnModule commitOnModuleInTheCommit: commitsOnModuleInTheCommit.values()){
-			if(modulesAll.get(commitOnModuleInTheCommit.pathNew).calcHasBeenBuggy(this.date)){
+			String path = Objects.equals(commitOnModuleInTheCommit.type, "DELETE") ? commitOnModuleInTheCommit.pathOld : commitOnModuleInTheCommit.pathNew;
+			if(modulesAll.get(path).commitsOnModuleInInterval.calcHasBeenBuggy()==1){
 				numOfModulesHasBeenBuggyOnTheCommitTemp++;
 			}
 		}
@@ -191,306 +206,106 @@ public class CommitOnModule {
 			for (Action action : actions) {
 				int index = 0;
 				switch (action.getNode().getType().name) {
-					case "AnonymousClassDeclaration":
-						index = 0;
-						break;
-					case "ArrayAccess":
-						index = 1;
-						break;
-					case "ArrayCreation":
-						index = 2;
-						break;
-					case "ArrayInitializer":
-						index = 3;
-						break;
-					case "ArrayType":
-						index = 4;
-						break;
-					case "AssertStatement":
-						index = 5;
-						break;
-					case "Assignment":
-						index = 6;
-						break;
-					case "Block":
-						index = 7;
-						break;
-					case "BooleanLiteral":
-						index = 8;
-						break;
-					case "BreakStatement":
-						index = 9;
-						break;
-					case "CastExpression":
-						index = 10;
-						break;
-					case "CatchClause":
-						index = 11;
-						break;
-					case "CharacterLiteral":
-						index = 12;
-						break;
-					case "ClassInstanceCreation":
-						index = 13;
-						break;
-					case "CompilationUnit":
-						index = 14;
-						break;
-					case "ConditionalExpression":
-						index = 15;
-						break;
-					case "ConstructorInvocation":
-						index = 16;
-						break;
-					case "ContinueStatement":
-						index = 17;
-						break;
-					case "DoStatement":
-						index = 18;
-						break;
-					case "EmptyStatement":
-						index = 19;
-						break;
-					case "ExpressionStatement":
-						index = 20;
-						break;
-					case "FieldAccess":
-						index = 21;
-						break;
-					case "FieldDeclaration":
-						index = 22;
-						break;
-					case "ForStatement":
-						index = 23;
-						break;
-					case "IfStatement":
-						index = 24;
-						break;
-					case "ImportDeclaration":
-						index = 25;
-						break;
-					case "InfixExpression":
-						index = 26;
-						break;
-					case "Initializer":
-						index = 27;
-						break;
-					case "Javadoc":
-						index = 28;
-						break;
-					case "LabeledStatement":
-						index = 29;
-						break;
-					case "MethodDeclaration":
-						index = 30;
-						break;
-					case "MethodInvocation":
-						index = 31;
-						break;
-					case "NullLiteral":
-						index = 32;
-						break;
-					case "NumberLiteral":
-						index = 33;
-						break;
-					case "PackageDeclaration":
-						index = 34;
-						break;
-					case "ParenthesizedExpression":
-						index = 35;
-						break;
-					case "PostfixExpression":
-						index = 36;
-						break;
-					case "PrefixExpression":
-						index = 37;
-						break;
-					case "PrimitiveType":
-						index = 38;
-						break;
-					case "QualifiedName":
-						index = 39;
-						break;
-					case "ReturnStatement":
-						index = 40;
-						break;
-					case "SimpleName":
-						index = 41;
-						break;
-					case "SimpleType":
-						index = 42;
-						break;
-					case "SingleVariableDeclaration":
-						index = 43;
-						break;
-					case "StringLiteral":
-						index = 44;
-						break;
-					case "SuperConstructorInvocation":
-						index = 45;
-						break;
-					case "SuperFieldAccess":
-						index = 46;
-						break;
-					case "SuperMethodInvocation":
-						index = 47;
-						break;
-					case "SwitchCase":
-						index = 48;
-						break;
-					case "SwitchStatement":
-						index = 49;
-						break;
-					case "SynchronizedStatement":
-						index = 50;
-						break;
-					case "ThisExpression":
-						index = 51;
-						break;
-					case "ThrowStatement":
-						index = 52;
-						break;
-					case "TryStatement":
-						index = 53;
-						break;
-					case "TypeDeclaration":
-						index = 54;
-						break;
-					case "TypeDeclarationStatement":
-						index = 55;
-						break;
-					case "TypeLiteral":
-						index = 56;
-						break;
-					case "VariableDeclarationExpression":
-						index = 57;
-						break;
-					case "VariableDeclarationFragment":
-						index = 58;
-						break;
-					case "VariableDeclarationStatement":
-						index = 59;
-						break;
-					case "WhileStatement":
-						index = 60;
-						break;
-					case "InstanceofExpression":
-						index = 61;
-						break;
-					case "LineComment":
-						index = 62;
-						break;
-					case "BlockComment":
-						index = 63;
-						break;
-					case "TagElement":
-						index = 64;
-						break;
-					case "TextElement":
-						index = 65;
-						break;
-					case "MemberRef":
-						index = 66;
-						break;
-					case "MethodRef":
-						index = 67;
-						break;
-					case "MethodRefParameter":
-						index = 68;
-						break;
-					case "EnhancedForStatement":
-						index = 69;
-						break;
-					case "EnumDeclaration":
-						index = 70;
-						break;
-					case "EnumConstantDeclaration":
-						index = 71;
-						break;
-					case "TypeParameter":
-						index = 72;
-						break;
-					case "ParameterizedType":
-						index = 73;
-						break;
-					case "QualifiedType":
-						index = 74;
-						break;
-					case "WildcardType":
-						index = 75;
-						break;
-					case "NormalAnnotation":
-						index = 76;
-						break;
-					case "MarkerAnnotation":
-						index = 77;
-						break;
-					case "SingleMemberAnnotation":
-						index = 78;
-						break;
-					case "MemberValuePair":
-						index = 79;
-						break;
-					case "AnnotationTypeDeclaration":
-						index = 80;
-						break;
-					case "AnnotationTypeMemberDeclaration":
-						index = 81;
-						break;
-					case "Modifier":
-						index = 82;
-						break;
-					case "UnionType":
-						index = 83;
-						break;
-					case "Dimension":
-						index = 84;
-						break;
-					case "LambdaExpression":
-						index = 85;
-						break;
-					case "IntersectionType":
-						index = 86;
-						break;
-					case "NameQualifiedType":
-						index = 87;
-						break;
-					case "CreationReference":
-						index = 88;
-						break;
-					case "ExpressionMethodReference":
-						index = 89;
-						break;
-					case "SuperMethhodReference":
-						index = 90;
-						break;
-					case "TypeMethodReference":
-						index = 91;
-						break;
-					case "INFIX_EXPRESSION_OPERATOR":
-						index = 92;
-						break;
-					case "METHOD_INVOCATION_RECEIVER":
-						index = 93;
-						break;
-					case "METHOD_INVOCATION_ARGUMENTS":
-						index = 94;
-						break;
-					case "TYPE_DECLARATION_KIND":
-						index = 95;
-						break;
-					case "ASSIGNEMENT_OPERATOR":
-						index = 96;
-						break;
-					case "PREFIX_EXPRESSION_OPERATOR":
-						index = 97;
-						break;
-					case "POSTFIX_EXPRESSION_OPERATOR":
-						index = 98;
-						break;
-					default:
-						index = 99;
-						break;
+					case "AnonymousClassDeclaration"        : index = 0;  break;
+					case "ArrayAccess"                      : index = 1;  break;
+					case "ArrayCreation"                    : index = 2;  break;
+					case "ArrayInitializer"                 : index = 3;  break;
+					case "ArrayType"                        : index = 4;  break;
+					case "AssertStatement"                  : index = 5;  break;
+					case "Assignment"                       : index = 6;  break;
+					case "Block"                            : index = 7;  break;
+					case "BooleanLiteral"                   : index = 8;  break;
+					case "BreakStatement"                   : index = 9;  break;
+					case "CastExpression"                   : index = 10; break;
+					case "CatchClause"                      : index = 11; break;
+					case "CharacterLiteral"                 : index = 12; break;
+					case "ClassInstanceCreation"            : index = 13; break;
+					case "CompilationUnit"                  : index = 14; break;
+					case "ConditionalExpression"            : index = 15; break;
+					case "ConstructorInvocation"            : index = 16; break;
+					case "ContinueStatement"                : index = 17; break;
+					case "DoStatement"                      : index = 18; break;
+					case "EmptyStatement"                   : index = 19; break;
+					case "ExpressionStatement"              : index = 20; break;
+					case "FieldAccess"                      : index = 21; break;
+					case "FieldDeclaration"                 : index = 22; break;
+					case "ForStatement"                     : index = 23; break;
+					case "IfStatement"                      : index = 24; break;
+					case "ImportDeclaration"                : index = 25; break;
+					case "InfixExpression"                  : index = 26; break;
+					case "Initializer"                      : index = 27; break;
+					case "Javadoc"                          : index = 28; break;
+					case "LabeledStatement"                 : index = 29; break;
+					case "MethodDeclaration"                : index = 30; break;
+					case "MethodInvocation"                 : index = 31; break;
+					case "NullLiteral"                      : index = 32; break;
+					case "NumberLiteral"                    : index = 33; break;
+					case "PackageDeclaration"               : index = 34; break;
+					case "ParenthesizedExpression"          : index = 35; break;
+					case "PostfixExpression"                : index = 36; break;
+					case "PrefixExpression"                 : index = 37; break;
+					case "PrimitiveType"                    : index = 38; break;
+					case "QualifiedName"                    : index = 39; break;
+					case "ReturnStatement"                  : index = 40; break;
+					case "SimpleName"                       : index = 41; break;
+					case "SimpleType"                       : index = 42; break;
+					case "SingleVariableDeclaration"        : index = 43; break;
+					case "StringLiteral"                    : index = 44; break;
+					case "SuperConstructorInvocation"       : index = 45; break;
+					case "SuperFieldAccess"                 : index = 46; break;
+					case "SuperMethodInvocation"            : index = 47; break;
+					case "SwitchCase"                       : index = 48; break;
+					case "SwitchStatement"                  : index = 49; break;
+					case "SynchronizedStatement"            : index = 50; break;
+					case "ThisExpression"                   : index = 51; break;
+					case "ThrowStatement"                   : index = 52; break;
+					case "TryStatement"                     : index = 53; break;
+					case "TypeDeclaration"                  : index = 54; break;
+					case "TypeDeclarationStatement"         : index = 55; break;
+					case "TypeLiteral"                      : index = 56; break;
+					case "VariableDeclarationExpression"    : index = 57; break;
+					case "VariableDeclarationFragment"      : index = 58; break;
+					case "VariableDeclarationStatement"     : index = 59; break;
+					case "WhileStatement"                   : index = 60; break;
+					case "InstanceofExpression"             : index = 61; break;
+					case "LineComment"                      : index = 62; break;
+					case "BlockComment"                     : index = 63; break;
+					case "TagElement"                       : index = 64; break;
+					case "TextElement"                      : index = 65; break;
+					case "MemberRef"                        : index = 66; break;
+					case "MethodRef"                        : index = 67; break;
+					case "MethodRefParameter"               : index = 68; break;
+					case "EnhancedForStatement"             : index = 69; break;
+					case "EnumDeclaration"                  : index = 70; break;
+					case "EnumConstantDeclaration"          : index = 71; break;
+					case "TypeParameter"                    : index = 72; break;
+					case "ParameterizedType"                : index = 73; break;
+					case "QualifiedType"                    : index = 74; break;
+					case "WildcardType"                     : index = 75; break;
+					case "NormalAnnotation"                 : index = 76; break;
+					case "MarkerAnnotation"                 : index = 77; break;
+					case "SingleMemberAnnotation"           : index = 78; break;
+					case "MemberValuePair"                  : index = 79; break;
+					case "AnnotationTypeDeclaration"        : index = 80; break;
+					case "AnnotationTypeMemberDeclaration"  : index = 81; break;
+					case "Modifier"                         : index = 82; break;
+					case "UnionType"                        : index = 83; break;
+					case "Dimension"                        : index = 84; break;
+					case "LambdaExpression"                 : index = 85; break;
+					case "IntersectionType"                 : index = 86; break;
+					case "NameQualifiedType"                : index = 87; break;
+					case "CreationReference"                : index = 88; break;
+					case "ExpressionMethodReference"        : index = 89; break;
+					case "SuperMethhodReference"            : index = 90; break;
+					case "TypeMethodReference"              : index = 91; break;
+					case "INFIX_EXPRESSION_OPERATOR"        : index = 92; break;
+					case "METHOD_INVOCATION_RECEIVER"       : index = 93; break;
+					case "METHOD_INVOCATION_ARGUMENTS"      : index = 94; break;
+					case "TYPE_DECLARATION_KIND"            : index = 95; break;
+					case "ASSIGNEMENT_OPERATOR"             : index = 96; break;
+					case "PREFIX_EXPRESSION_OPERATOR"       : index = 97; break;
+					case "POSTFIX_EXPRESSION_OPERATOR"      : index = 98; break;
+					default                                 : index = 99; break;
 				}
 				if (action.getName().contains("insert")) {
 					index += 100 * 0;
@@ -508,7 +323,7 @@ public class CommitOnModule {
 		}
 	}
 	int[] vectorAuthor;
-	public void calcVectorAuthor(People authors){
+	public void calcVectorAuthor(Committers authors){
 		vectorAuthor =new int[authors.size()];
 		vectorAuthor[authors.getIdOfAuthor(this.author)]++;
 	}
@@ -523,7 +338,7 @@ public class CommitOnModule {
 		}
 		vectorInterval[0]=minOfInterval;
 	}
-	int[] vectorType = new int[4];
+	int[] vectorType = {0,0,0,0};
 	public void calcVectorType(){
 		Set<String> content = Arrays.stream(message.split("\\s")).collect(Collectors.toSet());
 		int type = 0;
@@ -576,24 +391,21 @@ public class CommitOnModule {
 	public void calcVectorCodeChurn() {
 		vectorCodeChurn[0] = this.numOfAdditionsLine;
 		vectorCodeChurn[1] = this.numOfDeletionsLine;
-		vectorCodeChurn[2] = this.numOfChurnsLine;
+		vectorCodeChurn[2] = this.numOfChurnLine;
 	}
 	int[] vectorCochange;
 	public void calcVectorCoChange(Commits commitsAll, Modules modulesAll) {
 		vectorCochange = new int[modulesAll.size()];
 		for (CommitOnModule changeOnModuleCoCommit : commitsAll.get(this.idCommit).idParent2Modifications.get(this.idCommitParent).values()) {
-			if (Objects.equals(changeOnModuleCoCommit.type, "RENAME")){
+			if (Objects.equals(changeOnModuleCoCommit.type, "RENAME") | Objects.equals(changeOnModuleCoCommit.type, "COPY")){
 				vectorCochange[modulesAll.getIdModule(changeOnModuleCoCommit.pathOld)]++;
 				vectorCochange[modulesAll.getIdModule(changeOnModuleCoCommit.pathNew)]++;
+			}else if (Objects.equals(changeOnModuleCoCommit.type, "DELETE")) {
+				vectorCochange[modulesAll.getIdModule(changeOnModuleCoCommit.pathOld)]++;
 			}else {
-				if (!Objects.equals(changeOnModuleCoCommit.pathNew, "/dev/null")) {
-					vectorCochange[modulesAll.getIdModule(changeOnModuleCoCommit.pathNew)]++;
-				} else {
-					vectorCochange[modulesAll.getIdModule(changeOnModuleCoCommit.pathOld)]++;
-				}
+				vectorCochange[modulesAll.getIdModule(changeOnModuleCoCommit.pathNew)]++;
 			}
 		}
-
 	}
 
 
@@ -601,12 +413,12 @@ public class CommitOnModule {
 		calcNumOfAdditionsStatement();
 		calcNumOfDeletionsStatement();
 		calcNumOfChurnsStatement();
-		calcNumOfChangesDeclaration();
+		calcNumOfChangesDeclarationItself();
 		calcNumOfChangesCondition();
 		calcNumOfAdditionsStatementElse();
 		calcNumOfDeletionsStatementElse();
 	}
-	public void calcVectors(Commits commitsAll, Modules modulesAll, People authors) {
+	public void calcVectors(Commits commitsAll, Modules modulesAll, Committers authors) {
 		calcVectorSemanticType();
 		calcVectorAuthor(authors);
 		calcVectorCoChange(commitsAll, modulesAll);
@@ -722,4 +534,5 @@ public class CommitOnModule {
 		}
 		return distiller.getSourceCodeChanges();
 	}
+
 }

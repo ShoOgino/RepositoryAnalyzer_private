@@ -1,39 +1,55 @@
-/*
 package data;
 
-import me.tongfei.progressbar.ProgressBar;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestModules {
-    public static String   pathProject   = "C:/Users/ShoOgino/data/workspace/MLTool/datasets/egit";
-    public static String   idCommitHead = "b459d7381ea57e435bd9b71eb37a4cb4160e252b";
-    public static String[] commitEdgesMethod = {"2c1b0f4ad24fb082e5eb355e912519c21a5e3f41", "1241472396d11fe0e7b31c6faf82d04d39f965a6"};
-    public static String[] commitEdgesFile =  {"dfbdc456d8645fc0c310b5e15cf8d25d8ff7f84b","0cc8d32aff8ce91f71d2cdac8f3e362aff747ae7"};
+    @Test
+    public void testIdentifyChangesOnModule(){
+        Commits commits = new Commits();
 
-    public static String pathRepositoryMethod = pathProject+"/repositoryMethod";
-    public static String pathRepositoryFile = pathProject+"/repositoryFile";
-    public static String pathDataset = pathProject+"/datasets/"+ commitEdgesMethod[0].substring(0,8)+"_"+ commitEdgesMethod[1].substring(0,8)+".csv";
-    public static String pathModules = pathProject+"/modules";
-    public static String pathCommits = pathProject+"/commits";
-    public static String pathBugs = pathProject+"/bugs.json";
+        Commit commit1 = new Commit();
+        commit1.id="1";
+        commit1.idParentMaster = "0";
+        CommitsOnModule commitsOnModule0_1=new CommitsOnModule();
+        CommitOnModule commitOnModule0_1_0 = new CommitOnModule();
+        commitOnModule0_1_0.type="ADD";
+        commitOnModule0_1_0.idCommitParent = "0";
+        commitOnModule0_1_0.idCommit = "1";
+        commitOnModule0_1_0.pathOld="/dev/null";
+        commitOnModule0_1_0.pathNew="a";
+        commitOnModule0_1_0.pathNewParent = "/dev/null";
+        commitsOnModule0_1.put("0","1",commitOnModule0_1_0.pathOld, commitOnModule0_1_0.pathNew, commitOnModule0_1_0);
+        commit1.idParent2Modifications.put("0", commitsOnModule0_1);
+        commits.put("1",commit1);
 
-    public static Commits commitsAll = new Commits();
-    public static Modules modulesAll = new Modules();
-    public static Bugs bugsAll = new Bugs();
+        Commit commit2 = new Commit();
+        commit2.id="2";
+        commit2.idParentMaster="1";
+        commits.put("2",commit2);
 
-    @BeforeAll
-    static public void setUp() throws GitAPIException, IOException {
+        Commit commit3 = new Commit();
+        commit3.id = "3";
+        commit3.idParentMaster = "2";
+        CommitsOnModule commitsOnModule2_3=new CommitsOnModule();
+        CommitOnModule commitOnModule2_3_0 = new CommitOnModule();
+        commitOnModule2_3_0.type="MODIFY";
+        commitOnModule2_3_0.idCommitParent = "2";
+        commitOnModule2_3_0.idCommit= "3";
+        commitOnModule2_3_0.pathOld="a";
+        commitOnModule2_3_0.pathNew="a";
+        commitOnModule2_3_0.pathNewParent="a";
+        commitsOnModule2_3.put("2","3",commitOnModule2_3_0.pathOld, commitOnModule2_3_0.pathNew, commitOnModule2_3_0);
+        commit2.idParent2Modifications.put("2", commitsOnModule2_3);
+        commits.put("3",commit3);
+
+        Modules modules = new Modules();
+        Bugs bugs = new Bugs();
+        modules.analyzeAllModules(commits, bugs);
+        assertEquals(commitOnModule0_1_0, commitOnModule2_3_0.parents.get("0", "1", "/dev/null", commitOnModule2_3_0.pathNew));
     }
+    /*
     private void check() {
         for(Module module: ProgressBar.wrap(modules.values(),"check")) {
             boolean hasAddOrRenameOrCopy = false;
@@ -156,6 +172,5 @@ public class TestModules {
             }
         }
     }
+     */
 }
-*/
-

@@ -1,14 +1,10 @@
 import com.fasterxml.jackson.annotation.JsonProperty;
-import data.Bugs;
-import data.Commits;
-import data.Modules;
-import data.People;
+import data.*;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -22,16 +18,16 @@ public class Task implements Callable<String> {
     private String pathRepositoryFileCopy;
     private Repository repositoryFile;
     @JsonProperty("revisionTargetFile") private  String revisionFileTarget;
-    @JsonProperty("intervalRevisionFile_referableCalculatingProcessMetrics") private String[] intervalRevisionFile_referableCalculatingProcessMetrics = new String[2];
-    @JsonProperty("intervalRevisionFile_referableCalculatingIsBuggy") private String[] intervalRevisionFile_referableCalculatingIsBuggy = new String[2];
+    @JsonProperty("intervalRevisionFile_referableCalculatingMetricsIndependentOnFuture") private String[] intervalRevisionFile_referableCalculatingMetricsIndependentOnFuture = new String[2];
+    @JsonProperty("intervalRevisionFile_referableCalculatingMetricsDependentOnFuture") private String[] intervalRevisionFile_referableCalculatingMetricsDependentOnFuture = new String[2];
     private String pathRepositoryMethod;
     private Repository repositoryMethod;
     @JsonProperty("revisionTargetMethod") private  String revisionMethodTarget;
-    @JsonProperty("intervalRevisionMethod_referableCalculatingProcessMetrics") private String[] intervalRevisionMethod_referableCalculatingProcessMetrics = new String[2];
-    @JsonProperty("intervalRevisionMethod_referableCalculatingIsBuggy") private String[] intervalRevisionMethod_referableCalculatingIsBuggy = new String[2];
+    @JsonProperty("intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture") private String[] intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture = new String[2];
+    @JsonProperty("intervalRevisionMethod_referableCalculatingMetricsDependentOnFuture") private String[] intervalRevisionMethod_referableCalculatingMetricsDependentOnFuture = new String[2];
     private String pathOutput;
     private Commits commitsAll = new Commits();
-    private People authors = new People();
+    private Committers committers = new Committers();
     private Modules modulesAll = new Modules();
     private Bugs bugsAll = new Bugs();
 
@@ -60,7 +56,13 @@ public class Task implements Callable<String> {
                 commitsAll.loadCommitsFromRepository(repositoryMethod, pathCommits);
                 commitsAll.loadCommitsFromFile(pathCommits);
             }
-            authors.analyzeAuthors(commitsAll);
+            //childrenを捕捉
+            for(Commit commit: commitsAll.values()){
+                for(String idParent: commit.idParent2Modifications.keySet()){
+                    if(commitsAll.containsKey(idParent)) commitsAll.get(idParent).children.add(commit.id);
+                }
+            }
+            committers.analyzeAuthors(commitsAll);
 
             if(product.contains("bug")) {
                 String pathBugs = pathProject + "/bugs.json";
@@ -73,49 +75,40 @@ public class Task implements Callable<String> {
                 modulesAll.saveAsJson(pathModules);
             }
 
-
-
-
             if(product.contains("AST")
                     | product.contains("tokens")
                     | product.contains("commitGraph")
-                    | product.contains("metrics")
-                    | product.contains("hasBeenBuggy")
-                    | product.contains("isBuggy")) {
+                    | product.contains("metricsProcess")
+                    | product.contains("metricsCode")) {
                 // identify target modules
                 Modules modulesTarget = new Modules();
                 modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethodTarget);
 
-                //calculate future metrics
-                if(product.contains("isBuggy")){
-                    int dateTarget = commitsAll.get(revisionMethodTarget).date;
-                    int[] intervalDate_referableCalculatingIsBuggy = new int[2];
-                    intervalDate_referableCalculatingIsBuggy[0] = commitsAll.get(intervalRevisionMethod_referableCalculatingIsBuggy[0]).date;
-                    intervalDate_referableCalculatingIsBuggy[1] = commitsAll.get(intervalRevisionMethod_referableCalculatingIsBuggy[1]).date;
-                    modulesTarget.calculateIsBuggy(dateTarget, intervalDate_referableCalculatingIsBuggy);
-                }
                 //calculate past metrics
-                if (product.contains("commitGraph")){
-                    modulesTarget.calculateCommitGraph(commitsAll, modulesAll, authors, intervalRevisionMethod_referableCalculatingProcessMetrics);
-                }
-                if (product.contains("metrics")) {
-                    modulesTarget.calculateProcessMetrics(commitsAll, modulesAll, authors, intervalRevisionMethod_referableCalculatingProcessMetrics);
-                    modulesTarget.calculateCodeMetrics(repositoryFile, revisionFileTarget, repositoryMethod, revisionMethodTarget);
+                if (product.contains("AST")) {
+                    modulesTarget.calculateAST(repositoryMethod, revisionMethodTarget);
                 }
                 if (product.contains("tokens")){
                 }
-                if (product.contains("AST")) {
-                    modulesTarget.calculateAST(repositoryMethod, revisionMethodTarget);
+                if (product.contains("metricsCode")) {
+                    modulesTarget.calculateMetricsCode(repositoryFile, revisionFileTarget, repositoryMethod, revisionMethodTarget);
+                }
+                if (product.contains("commitGraph")){
+                    modulesTarget.calculateCommitGraph(commitsAll, modulesAll, committers, intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture);
+                }
+                if(product.contains("metricsProcess")){
+                    modulesTarget.calculateMetricsProcess(
+                            commitsAll,
+                            modulesAll,
+                            intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture,
+                            intervalRevisionMethod_referableCalculatingMetricsDependentOnFuture
+                    );
                 }
 
                 //save calculated metrics
                 pathOutput = pathProject + "/output/" + name;
-                if (product.contains("AST") | product.contains("commitGraph") | product.contains("tokens")) {
-                    modulesTarget.saveAsJson(pathOutput);
-                }
-                if (product.contains("metrics")) {
-                    modulesTarget.saveAsCSV(pathOutput + ".csv");
-                }
+                modulesTarget.saveAsJson(pathOutput);
+                modulesTarget.saveAsCSV(pathOutput + ".csv");
             }
         }catch (Exception exception){
             exception.printStackTrace();

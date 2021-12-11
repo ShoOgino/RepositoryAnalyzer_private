@@ -12,66 +12,121 @@ import java.util.stream.Collectors;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> implements Cloneable{
-    @JsonDeserialize(keyUsing = DeserializerModification.class) private final MultiKeyMap<String, CommitOnModule> commitsOnModule = new MultiKeyMap<>();
-    // future metrics
+public class CommitsOnModule  implements Cloneable {
+    // todo MultiMapクラスに変更して、DeserializerModificationクラスを消す。
+    @JsonDeserialize(keyUsing = DeserializerModification.class)
+    private final MultiKeyMap<String, CommitOnModule> commitsOnModule = new MultiKeyMap<>();
+    // future-dependent metrics
     int isBuggy = 0;
-    public void calcIsBuggy(int dateTarget, int[] intervalDate_referableCalculatingIsBuggy) {
-        for(CommitOnModule commitOnModuleFixing: commitsOnModule.values()){
-            for(String idCommitInducingBugsThatThisCommitFixes: commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes){
+    public void calcIsBuggy(int dateTarget, int dateUntilReferableCalculatingIsBuggy) {
+        for (CommitOnModule commitOnModuleFixing : commitsOnModule.values()) {
+            for (String idCommitInducingBugsThatThisCommitFixes : commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes) {
                 CommitOnModule commitOnModuleInducing = queryByIdCommit(idCommitInducingBugsThatThisCommitFixes).get(0);
-                if(commitOnModuleInducing.date<dateTarget & dateTarget<commitOnModuleFixing.date & commitOnModuleFixing.date<intervalDate_referableCalculatingIsBuggy[1]){
-                    this.isBuggy=1;
+                if (commitOnModuleInducing.date < dateTarget & dateTarget < commitOnModuleFixing.date & commitOnModuleFixing.date < dateUntilReferableCalculatingIsBuggy) {
+                    this.isBuggy = 1;
                     return;
                 }
             }
         }
     }
     int getBuggy = 0;
-    public void calcGetBuggy(){}
-    // past metrics
+    public void calcGetBuggy(int dateCommitInducingBugsReferableFrom, int dateTarget, int dateCommitFixingBugsReferableUntil) {
+
+    }
+    // future-independent metrics
+    int hasBeenBuggy=0;
+    public int calcHasBeenBuggy(){
+        for(CommitOnModule commitOnModule:commitsOnModule.values()){
+            commitOnModule.calcIsFix();
+            if(commitOnModule.isFix){
+                hasBeenBuggy=1;
+                return hasBeenBuggy;
+            }
+        }
+        return 0;
+    }
+    int periodExisting = 0;
+    public void calcPeriodExisting(int dateFrom, int dateUntil) {
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            if (Objects.equals(commitOnModule.type, "ADD")) {
+                dateFrom = commitOnModule.date;
+            }
+        }
+        this.periodExisting = (dateUntil - dateFrom) / (60 * 60 * 24 * 7);
+    }
+    double periodExistingWeighted = 0;
+    public void calcPeriodExistingWeighted(int dateTo){
+        int periodExistingWeightedTemp = 0;
+        int numOfAdditionsLineAll=0;
+        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+            int age = (dateTo-commitOnModule.date)/(60 * 60 * 24 * 7);
+            commitOnModule.calcNumOfAdditionsLine();
+            periodExistingWeightedTemp += age*commitOnModule.numOfAdditionsLine;
+            numOfAdditionsLineAll += commitOnModule.numOfAdditionsLine;
+        }
+        periodExistingWeighted = periodExistingWeightedTemp/(double)numOfAdditionsLineAll;
+    }
     int numOfCommits = 0;
     public void calcNumOfCommits() {
-        int numOfCommitsTemp = 0;
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
-            if(commitOnModule.isMerge)continue;
-            numOfCommitsTemp++;
+        this.numOfCommits = commitsOnModule.size();
+    }
+    double numOfCommitsNeighbor = 0;
+    public void calcNumOfCommitsNeighbor(Commits commitsAll, Modules modulesAll) {
+        double numOfCommitsNeighborTemp = 0;
+        Map<String, Integer> path2TimesCommittedSimultaneously = calcPath2TimesCommittedSimultaneously(commitsAll);
+        int numOfCommitOnModulesCommittedSimltaneouslyAll = 0;
+        for (String path : path2TimesCommittedSimultaneously.keySet()) {
+            numOfCommitOnModulesCommittedSimltaneouslyAll += path2TimesCommittedSimultaneously.get(path);
+            Module moduleCommittedSimultaneously = modulesAll.get(path);
+            numOfCommitsNeighborTemp += path2TimesCommittedSimultaneously.get(path) * moduleCommittedSimultaneously.commitsOnModuleInInterval.numOfCommits;
         }
-        this.numOfCommits = numOfCommitsTemp;
+        numOfCommitsNeighborTemp /= (double)numOfCommitOnModulesCommittedSimltaneouslyAll;
+        this.numOfCommitsNeighbor = numOfCommitsNeighborTemp;
     }
     int numOfCommitsFixingBugs = 0;
     public void calcNumOfCommitsFixingBugs() {
         int numOfCommitsFixingBugsTemp = 0;
-        for(CommitOnModule commitOnModuleFixing: commitsOnModule.values()) {
-            if(0<commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes.size()) {
-                numOfCommitsFixingBugsTemp+=1;
+        for (CommitOnModule commitOnModuleFixing : commitsOnModule.values()) {
+            if (0 < commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes.size()) {
+                numOfCommitsFixingBugsTemp += 1;
             }
         }
         this.numOfCommitsFixingBugs = numOfCommitsFixingBugsTemp;
     }
+    int numOfCommitsRefactoring = 0;
+    public void calcNumOfCommitsRefactoring(Commits commitsAll) {
+        int numOfCommitsRefactoringTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            Commit commit = commitsAll.get(commitOnModule.idCommit);
+            if (commit.message.contains("refactor")) {
+                numOfCommitsRefactoringTemp++;
+            }
+        }
+        this.numOfCommitsRefactoring = numOfCommitsRefactoringTemp;
+    }
     int numOfBugreportsFixed = 0;
     public void calcNumOfBugreportsUnique() {
         Set<String> idsBugreports = new HashSet<String>();
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             idsBugreports.addAll(commitOnModule.IdsBugThatThisCommitFixing);
         }
         numOfBugreportsFixed = idsBugreports.size();
     }
     int numOfCommitsInducingBugs = 0;
-    public void calcNumOfCommitsInducingBugs(){
+    public void calcNumOfCommitsInducingBugs() {
         int numOfCommitsInducingBugsTemp = 0;
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
-            commitOnModule.calcIsInduce(commitsOnModule.values().stream().map(item->item.idCommit).collect(Collectors.toList()));
-            if(commitOnModule.isInduce)numOfCommitsInducingBugsTemp++;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcIsInduce(commitsOnModule.values().stream().map(item -> item.idCommit).collect(Collectors.toList()));
+            if (commitOnModule.isInduce) numOfCommitsInducingBugsTemp++;
         }
         numOfCommitsInducingBugs = numOfCommitsInducingBugsTemp;
     }
-    int numOfCommitsOtherModulesHasBeenBuggyOnTheCommit=0;
+    int numOfCommitsOtherModulesHasBeenBuggyOnTheCommit = 0;
     public void calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(Commits commitsAll, Modules modulesAll) {
         int numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp = 0;
-        for(CommitOnModule commitOnModule: this.commitsOnModule.values()){
+        for (CommitOnModule commitOnModule : this.commitsOnModule.values()) {
             commitOnModule.calcNumOfModulesHasBeenBuggyOnTheCommit(commitsAll, modulesAll);
-            if(0<commitOnModule.numOfModulesHasBeenBuggyOnTheCommit){
+            if (0 < commitOnModule.numOfModulesHasBeenBuggyOnTheCommit) {
                 numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp++;
             }
         }
@@ -80,9 +135,9 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     int numOfCommitsOtherModulesGetBuggyOnTheCommit = 0;
     public void calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(Commits commitsAll) {
         int numOfCommitsOtherModulesGetBuggyOnTheCommitTemp = 0;
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcNumOfModulesGetBuggyOnTheCommit(commitsAll);
-            if(0<commitOnModule.numOfModulesGetBuggyOnTheCommit){
+            if (0 < commitOnModule.numOfModulesGetBuggyOnTheCommit) {
                 numOfCommitsOtherModulesGetBuggyOnTheCommitTemp++;
             }
         }
@@ -91,74 +146,93 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     int numOfCommittersUnique = 0;
     public void calcNumOfCommittersUnique() {
         Set<String> setAuthors = new HashSet<>();
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
-            if(commitOnModule.isMerge)continue;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             setAuthors.add(commitOnModule.author);
         }
         this.numOfCommittersUnique = setAuthors.size();
     }
-    int numOfCommittersMinor = 0;
-    public void calcNumOfCommittersMinor() {
+    double numOfCommittersUniqueNeighbor = 0;
+    public void calcNumOfCommittersUniqueNeighbor(Commits commitsAll, Modules modulesAll) {
+        double numOfCommittersUniqueNeighborTemp = 0;
+        Map<String, Integer> path2TimesCommittedSimultaneously = calcPath2TimesCommittedSimultaneously(commitsAll);
+        int numOfCommitOnModulesCommittedSimltaneouslyAll = 0;
+        for (String path : path2TimesCommittedSimultaneously.keySet()) {
+            numOfCommitOnModulesCommittedSimltaneouslyAll += path2TimesCommittedSimultaneously.get(path);
+            Module moduleCommittedSimultaneously = modulesAll.get(path);
+            numOfCommittersUniqueNeighborTemp += path2TimesCommittedSimultaneously.get(path) * moduleCommittedSimultaneously.commitsOnModuleInInterval.numOfCommittersUnique;
+        }
+        numOfCommittersUniqueNeighborTemp /= numOfCommitOnModulesCommittedSimltaneouslyAll;
+        this.numOfCommittersUniqueNeighbor = numOfCommittersUniqueNeighborTemp;
+    }
+    int numOfCommittersUnfamiliar = 0;
+    public void calcNumOfCommittersUnfamiliar() {
         Set<String> setAuthors = new HashSet<>();
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
-            if(commitOnModule.isMerge)continue;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             setAuthors.add(commitOnModule.author);
         }
 
         int numOfCommittersMinorTemp = 0;
         for (String nameAuthor : setAuthors) {
-            int count = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)&!item.isMerge).count();
-            double ownership =  count / (float) commitsOnModule.values().stream().filter(item -> !item.isMerge).count();
-            if ( ownership < 0.2) {
+            int numOfCommitsByTheAuthor = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
+            double ownership = numOfCommitsByTheAuthor / (float) commitsOnModule.size();
+            if (ownership < 0.2) {
                 numOfCommittersMinorTemp++;
             }
         }
-        this.numOfCommittersMinor = numOfCommittersMinorTemp;
+        this.numOfCommittersUnfamiliar = numOfCommittersMinorTemp;
     }
-    int numOfCommittersMajor = 0;
-    public void calcNumOfCommittersMajor() {
+    int numOfCommittersFamiliar = 0;
+    public void calcNumOfCommittersFamiliar() {
         Set<String> setAuthors = new HashSet<>();
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
-            if(commitOnModule.isMerge)continue;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             setAuthors.add(commitOnModule.author);
         }
 
         int numOfCommittersMajorTemp = 0;
         for (String nameAuthor : setAuthors) {
-            int count = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)&!item.isMerge).count();
-            double ownership =  count / (float) commitsOnModule.values().stream().filter(item -> !item.isMerge).count();
-            if ( 0.2 <= ownership) {
+            int numOfCommitsByTheAuthor = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
+            double ownership = numOfCommitsByTheAuthor / (float) commitsOnModule.size();
+            if (0.2 <= ownership) {
                 numOfCommittersMajorTemp++;
             }
         }
-        this.numOfCommittersMajor = numOfCommittersMajorTemp;
+        this.numOfCommittersFamiliar = numOfCommittersMajorTemp;
     }
-    double ownership = 0;
-    public void calcOwnership() {
+    double maxOfRatio_numOfCommitsOfACommitter = 0;
+    public void calcMaxOfRatio_numOfCommitsOfACommitter() {
         Set<String> setAuthors = new HashSet<>();
-        for(CommitOnModule commitOnModule: commitsOnModule.values()){
-            if(commitOnModule.isMerge)continue;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             setAuthors.add(commitOnModule.author);
         }
 
-        int numOfCommittersMajorTemp = 0;
         for (String nameAuthor : setAuthors) {
-            int count = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor) & !item.isMerge).count();
-            double ownershipTemp = count / (float) commitsOnModule.values().stream().filter(item -> !item.isMerge).count();
-            if (this.ownership < ownershipTemp) {
-                this.ownership = ownershipTemp;
+            int numOfCommitsOfTheCommitter = (int) commitsOnModule.values().stream().filter(item -> Objects.equals(item.author, nameAuthor)).count();
+            double numOfcommitsOfACommitterByNumOfCommitsAll = numOfCommitsOfTheCommitter / (float) commitsOnModule.size();
+            if (this.maxOfRatio_numOfCommitsOfACommitter < numOfcommitsOfACommitterByNumOfCommitsAll) {
+                this.maxOfRatio_numOfCommitsOfACommitter = numOfcommitsOfACommitterByNumOfCommitsAll;
             }
         }
     }
-    int period = 0;
-    public void calcPeriod(Commits commitsAll , int dateUntil) {
-        int dateFrom = Integer.MAX_VALUE;
-        for (CommitOnModule CommitOnModule : commitsOnModule.values()) {
-            if (CommitOnModule.date < dateFrom) {
-                dateFrom = CommitOnModule.date;
+    double maxOfRatio_numOfChangesLineOfACommitter = 0;
+    public void calc_maxOfRatio_numOfChangesLineOfACommitter() {
+        Map<String, Integer> author2NumOfChangesLine = calcAuthor2NumOfChangesLine();
+        int maxOfNumOfChangesByAnAuthor = 0;
+        for (Integer numOfChangesByTheAuthor : author2NumOfChangesLine.values()) {
+            if (maxOfNumOfChangesByAnAuthor < numOfChangesByTheAuthor) {
+                maxOfNumOfChangesByAnAuthor = numOfChangesByTheAuthor;
             }
         }
-        this.period = (dateUntil - dateFrom) / (60 * 60 * 24);
+        calcSumOfChangesLine();
+        this.maxOfRatio_numOfChangesLineOfACommitter = maxOfNumOfChangesByAnAuthor / (double) this.sumOfChangesLine;
+    }
+    double geometricmean_sumOfChangesLineByTheCommitter = 0;
+    public void calcGeometricmean_sumOfChangesLineByTheCommitter() {
+        double temp = 1;
+        Map<String, Integer> author2NumOfChangesLine = calcAuthor2NumOfChangesLine();
+        for (Integer numOfChangesLine : author2NumOfChangesLine.values()) {
+            temp *= numOfChangesLine;
+        }
+        this.geometricmean_sumOfChangesLineByTheCommitter = Math.pow(temp, 1.0 / author2NumOfChangesLine.size());
     }
     int maxOfInterval = 0;
     public void calcMaxOfInterval() {
@@ -203,35 +277,107 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
         for (int i = 0; i < commitOnModulesSorted.size() - 1; i++) {
             sumInterval += commitOnModulesSorted.get(i + 1).date - commitOnModulesSorted.get(i).date;
         }
-        this.avgOfInterval = (sumInterval / (float) (commitOnModulesSorted.size()-1))/(60 * 60 * 24 * 7);
+        this.avgOfInterval = (sumInterval / (float) (commitOnModulesSorted.size() - 1)) / (60 * 60 * 24 * 7);
     }
     int sumOfAdditionsLine = 0;
     public void calcSumOfAdditionsLine() {
         int sumOfAdditionsLineTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfAdditionsLine();
             sumOfAdditionsLineTemp += commitOnModule.numOfAdditionsLine;
         }
         this.sumOfAdditionsLine = sumOfAdditionsLineTemp;
     }
+    int maxOfAdditionsLine = 0;
+    public void calcMaxOfAdditionsLine() {
+        int maxOfAdditionsLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfAdditionsLine();
+            if (maxOfAdditionsLineTemp < commitOnModule.numOfAdditionsLine) {
+                maxOfAdditionsLineTemp = commitOnModule.numOfAdditionsLine;
+            }
+        }
+        this.maxOfAdditionsLine = maxOfAdditionsLineTemp;
+    }
+    double avgOfAdditionsLine = 0;
+    public void calcAvgOfAdditionsLine() {
+        int sumOfAdditionsLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfAdditionsLine();
+            sumOfAdditionsLineTemp += commitOnModule.numOfAdditionsLine;
+        }
+        this.avgOfAdditionsLine = sumOfAdditionsLineTemp / (double) commitsOnModule.size();
+    }
     int sumOfDeletionsLine = 0;
     public void calcSumOfDeletionsLine() {
         int sumOfDeletionsLineTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfDeletionsLine();
-            sumOfDeletionsLineTemp+=commitOnModule.numOfDeletionsLine;
+            sumOfDeletionsLineTemp += commitOnModule.numOfDeletionsLine;
         }
         this.sumOfDeletionsLine = sumOfDeletionsLineTemp;
+    }
+    int maxOfDeletionsLine = 0;
+    public void calcMaxOfDeletionsLine() {
+        int maxOfDeletionsLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfDeletionsLine();
+            if (maxOfDeletionsLineTemp < commitOnModule.numOfDeletionsLine) {
+                maxOfDeletionsLineTemp = commitOnModule.numOfDeletionsLine;
+            }
+        }
+        this.maxOfDeletionsLine = maxOfDeletionsLineTemp;
+    }
+    double avgOfDeletionsLine = 0;
+    public void calcAvgOfDeletionsLine() {
+        int sumOfDeletionsLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfDeletionsLine();
+            sumOfDeletionsLineTemp += commitOnModule.numOfDeletionsLine;
+        }
+        this.avgOfDeletionsLine = sumOfDeletionsLineTemp / (double) commitsOnModule.size();
+    }
+    int sumOfChangesLine = 0;
+    public void calcSumOfChangesLine() {
+        calcSumOfAdditionsLine();
+        calcSumOfDeletionsLine();
+        this.sumOfChangesLine = sumOfAdditionsLine + sumOfDeletionsLine;
+    }
+    int sumOfChurnLine = 0;
+    public void calcSumOfChurnLine() {
+        int sumOfChurnLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfChurnLine();
+            sumOfChurnLineTemp += commitOnModule.numOfChurnLine;
+        }
+        this.sumOfChurnLine = sumOfChurnLineTemp;
+    }
+    int maxOfChurnLine = 0;
+    public void calcMaxOfChurnLine() {
+        int maxOfChurnLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfChurnLine();
+            if (maxOfChurnLineTemp < commitOnModule.numOfChurnLine) {
+                maxOfChurnLineTemp = commitOnModule.numOfChurnLine;
+            }
+        }
+        this.maxOfChurnLine = maxOfChurnLineTemp;
+    }
+    double avgOfChurnLine = 0;
+    public void calcAvgOfChurnLine() {
+        int sumOfChurnLineTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            commitOnModule.calcNumOfChurnLine();
+            sumOfChurnLineTemp += commitOnModule.numOfChurnLine;
+        }
+        this.avgOfChurnLine = sumOfChurnLineTemp / (double) commitsOnModule.size();
     }
     int sumOfAdditionsStatement = 0;
     public void calcSumOfAdditionsStatement() {
         int sumStmtAddedTemp = 0;
-        for (CommitOnModule commitOnModule: commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcNumOfAdditionsStatement();
-            sumStmtAddedTemp+=commitOnModule.numOfAdditionsStatement;
+            sumStmtAddedTemp += commitOnModule.numOfAdditionsStatement;
         }
         this.sumOfAdditionsStatement = sumStmtAddedTemp;
     }
@@ -239,7 +385,6 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     public void calcMaxOfAdditionsStatement() {
         int maxStmtAddedTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge) continue;
             commitOnModule.calcNumOfAdditionsStatement();
             if (maxStmtAddedTemp < commitOnModule.numOfAdditionsStatement) {
                 maxStmtAddedTemp = commitOnModule.numOfAdditionsStatement;
@@ -258,9 +403,8 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     public void calcSumOfDeletionsStatement() {
         int sumStmtDeletedTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfDeletionsStatement();
-            sumStmtDeletedTemp+=commitOnModule.numOfDeletionsStatement;
+            sumStmtDeletedTemp += commitOnModule.numOfDeletionsStatement;
         }
         this.sumOfDeletionsStatement = sumStmtDeletedTemp;
     }
@@ -268,7 +412,6 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     public void calcMaxOfDeletionsStatement() {
         int maxStmtDeleted = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfDeletionsStatement();
             if (maxStmtDeleted < commitOnModule.numOfDeletionsStatement) {
                 maxStmtDeleted = commitOnModule.numOfDeletionsStatement;
@@ -287,9 +430,8 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     public void calcSumOfChurnsStatement() {
         int sumChurn = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfChurnsStatement();
-            sumChurn+=commitOnModule.numOfChurnsStatement;
+            sumChurn += commitOnModule.numOfChurnsStatement;
         }
         this.sumOfChurnsStatement = sumChurn;
     }
@@ -297,7 +439,6 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     public void calcMaxOfChurnsStatement() {
         int maxChurn = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfChurnsStatement();
             if (maxChurn < commitOnModule.numOfChurnsStatement) maxChurn = commitOnModule.numOfChurnsStatement;
         }
@@ -310,23 +451,45 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
         if (this.numOfCommits == 0) this.avgOfChurnsStatement = 0;
         else this.avgOfChurnsStatement = sumOfChurnsStatement / (float) numOfCommits;
     }
-    int sumOfChangesDeclaration = 0;
-    public void calcSumOfChangesDeclaration() {
+    int sumOfChangesStatement = 0;
+    public void calcSumOfChangesStatement(){
+        calcSumOfAdditionsStatement();
+        calcSumOfDeletionsStatement();
+        this.sumOfChangesStatement = this.sumOfAdditionsStatement+this.sumOfDeletionsStatement;
+    }
+    int maxOfChangesStatement = 0;
+    public void calcMaxOfChangesStatement(){
+        int temp = 0;
+        for(CommitOnModule commitOnModule: commitsOnModule.values()) {
+            commitOnModule.calcNumOfChangesStatement();
+            if (temp < commitOnModule.numOfChangesStatement) {
+                temp = commitOnModule.numOfChangesStatement;
+            }
+        }
+        maxOfChangesStatement = temp;
+    }
+    double avgOfChangesStatement=0;
+    public void calcAvgOfChangesStatement(){
+        calcSumOfChangesStatement();
+        calcNumOfCommits();
+        if (this.numOfCommits == 0) this.avgOfChangesStatement = 0;
+        else this.avgOfChangesStatement = sumOfChangesStatement / (float) numOfCommits;
+    }
+    int sumOfChangesDeclarationItself = 0;
+    public void calcSumOfChangesDeclarationItself() {
         int sumDeclTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
-            commitOnModule.calcNumOfChangesDeclaration();
-            sumDeclTemp+=commitOnModule.numOfChangesDeclaration;
+            commitOnModule.calcNumOfChangesDeclarationItself();
+            sumDeclTemp += commitOnModule.numOfChangesDeclarationItself;
         }
-        this.sumOfChangesDeclaration = sumDeclTemp;
+        this.sumOfChangesDeclarationItself = sumDeclTemp;
     }
     int sumOfChangesCondition = 0;
     public void calcSumOfChangesCondition() {
         int sumCondTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfChangesCondition();
-            sumCondTemp+=commitOnModule.numOfChangesCondition;
+            sumCondTemp += commitOnModule.numOfChangesCondition;
         }
         this.sumOfChangesCondition = sumCondTemp;
     }
@@ -334,27 +497,112 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
     public void calcSumOfAdditionStatementElse() {
         int sumElseAdded = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfAdditionsStatementElse();
-            sumElseAdded+=commitOnModule.numOfAdditionsStatementElse;
+            sumElseAdded += commitOnModule.numOfAdditionsStatementElse;
         }
         this.sumOfAdditionStatementElse = sumElseAdded;
     }
     int sumOfDeletionStatementElse = 0;
     public void calcSumOfDeletionStatementElse() {
-        int sumElseDeleted = 0;
+        int sumOfDeletionStatementElseTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            if(commitOnModule.isMerge)continue;
             commitOnModule.calcNumOfDeletionsStatementElse();
-            sumElseDeleted+=commitOnModule.numOfDeletionsStatementElse;
+            sumOfDeletionStatementElseTemp += commitOnModule.numOfDeletionsStatementElse;
         }
-        this.sumOfDeletionStatementElse = sumElseDeleted;
+        this.sumOfDeletionStatementElse = sumOfDeletionStatementElseTemp;
     }
-
-
-
-    public List<CommitOnModule> queryByIdCommit(String idCommit){
-        return commitsOnModule.values().stream().filter(a->a.idCommit.equals(idCommit)).collect(Collectors.toList());
+    int sumOfChangesStatementElse = 0;
+    public void calcSumOfChangesStatementElse() {
+        calcSumOfAdditionStatementElse();
+        calcSumOfDeletionStatementElse();
+        sumOfChangesStatementElse = sumOfAdditionStatementElse + sumOfDeletionStatementElse;
+    }
+    double complexityHistory = 0;
+    public void calcComplexityHistory(Commits commits) {
+        if (this.complexityHistory != 0) return;//計算結果は再利用できる。このメトリクスの計算コストはでかいので、計算は１回だけにする。ちょっと書き方が汚い気がするけど良し。
+        List<Double> entropiesOnCommitsAndModule = new ArrayList<>();
+        List<String> idsCommitProcessed = new ArrayList<>();
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            // このCommitOnModuleが所属する部分コミット列を取得する
+            Set<Commit> commitsInBlock = commits.calcCommitsInBlock(commitOnModule.idCommit);
+            List<Commit> test = commitsInBlock.stream().filter(item->idsCommitProcessed.contains(item.id)).collect(Collectors.toList());
+            if(0<test.size()) continue;
+            // 部分コミット列について、entropyOnCommitsを算出
+            Map<String, Integer> path2ChangesLine = new HashMap<>();
+            for (Commit commit : commitsInBlock) {
+                for (CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()) {
+                    for (CommitOnModule commitOnModule1 : commitsOnModule.values()) {
+                        String path = Objects.equals(commitOnModule1.type, "DELETE") ? commitOnModule1.pathOld : commitOnModule1.pathNew;
+                        commitOnModule1.calcNumOfChangesLine();
+                        if (path2ChangesLine.containsKey(path)) {
+                            path2ChangesLine.replace(path, path2ChangesLine.get(path) + commitOnModule1.numOfChangesLine);
+                        } else {
+                            if (commitOnModule1.numOfChangesLine == 0) {
+                            } else {
+                                path2ChangesLine.put(path, commitOnModule1.numOfChangesLine);
+                            }
+                        }
+                    }
+                }
+            }
+            if (path2ChangesLine.size() == 1) continue;
+            double entropyOnCommits = 0;
+            int numOfChangesAll = 0;
+            for (int numOfChangesTheModule : path2ChangesLine.values()) {
+                numOfChangesAll += numOfChangesTheModule;
+            }
+            for (int numOfChangesTheModule : path2ChangesLine.values()) {
+                double p = numOfChangesTheModule / (double) numOfChangesAll;
+                double log_n_p = Math.log(p) / Math.log(path2ChangesLine.size());
+                double temp = Math.abs(p * log_n_p);
+                entropyOnCommits += temp;
+            }
+            // そのモジュールについて、HCPF_3を算出
+            double entropyOnCommitsAndModule = entropyOnCommits / (double) path2ChangesLine.size();
+            entropiesOnCommitsAndModule.add(entropyOnCommitsAndModule);
+            idsCommitProcessed.add(commitOnModule.idCommit);
+        }
+        // そのモジュールについてHCM_3sを算出(HCPF_3を単純に足し合わせる)
+        this.complexityHistory = entropiesOnCommitsAndModule.stream().mapToDouble(val -> val).sum();
+    }
+    double complexityHistoryNeighbor = 0;
+    public void calcComplexityHistoryNeighbor(Commits commitsAll, Modules modulesAll) {
+        double complexityHistoryNeighborTemp = 0;
+        Map<String, Integer> path2TimesCommittedSimultaneously = calcPath2TimesCommittedSimultaneously(commitsAll);
+        int numOfCommitsByAllCommitters = 0;
+        for (String path : path2TimesCommittedSimultaneously.keySet()) {
+            numOfCommitsByAllCommitters += path2TimesCommittedSimultaneously.get(path);
+            Module moduleCommittedSimultaneously = modulesAll.get(path);
+            complexityHistoryNeighborTemp += path2TimesCommittedSimultaneously.get(path) * moduleCommittedSimultaneously.commitsOnModuleInInterval.complexityHistory;
+        }
+        complexityHistoryNeighborTemp /= numOfCommitsByAllCommitters;
+        this.complexityHistoryNeighbor = complexityHistoryNeighborTemp;
+    }
+    int maxOfModulesCommittedSimultaneously = 0;
+    public void calcMaxOfModulesCommittedSimultaneously(Commits commitsAll) {
+        int maxOfModulesCommittedSimultaneouslyTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            Commit commit = commitsAll.get(commitOnModule.idCommit);
+            for (CommitsOnModule commitsOnModule1 : commit.idParent2Modifications.values()) {
+                if (maxOfModulesCommittedSimultaneouslyTemp < commitsOnModule1.size())
+                    maxOfModulesCommittedSimultaneouslyTemp = commitsOnModule1.size();
+            }
+        }
+        this.maxOfModulesCommittedSimultaneously = maxOfModulesCommittedSimultaneouslyTemp;
+    }
+    double avgOfModulesCommittedSimultaneously = 0;
+    public void calcAvgOfModulesCommittedSimultaneously(Commits commitsAll) {
+        int sumOfModulesCommittedSimultaneouslyTemp = 0;
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            Commit commit = commitsAll.get(commitOnModule.idCommit);
+            for (CommitsOnModule commitsOnModule1 : commit.idParent2Modifications.values()) {
+                sumOfModulesCommittedSimultaneouslyTemp += commitsOnModule1.size();
+            }
+        }
+        this.avgOfModulesCommittedSimultaneously = sumOfModulesCommittedSimultaneouslyTemp / (double) commitsOnModule.size();
+    }
+    public List<CommitOnModule> queryByIdCommit(String idCommit) {
+        return commitsOnModule.values().stream().filter(a -> a.idCommit.equals(idCommit)).collect(Collectors.toList());
     }
     @Override public CommitsOnModule clone() {
         CommitsOnModule commitsOnModule = null;
@@ -370,45 +618,160 @@ public class CommitsOnModule extends MultiKeyMap<String, CommitOnModule> impleme
             commitOnModule.calcMetrics();
         }
     }
-    public void calcVectorsOnEachNode(Commits commitsAll, Modules modulesAll, People authors) {
+    public void calcVectorsOnEachNode(Commits commitsAll, Modules modulesAll, Committers authors) {
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcVectors(commitsAll, modulesAll, authors);
         }
     }
-    public CommitOnModule get(String idCommitParent, String idCommit, String pathOld, String pathNew){
+    public CommitOnModule get(String idCommitParent, String idCommit, String pathOld, String pathNew) {
         return commitsOnModule.get(idCommitParent, idCommit, pathOld, pathNew);
     }
     public List<CommitOnModule> queryIdCommit(String idCommit) {
-        return commitsOnModule.values().stream().filter(a->a.idCommit.equals(idCommit)).collect(Collectors.toList());
+        return commitsOnModule.values().stream().filter(a -> a.idCommit.equals(idCommit)).collect(Collectors.toList());
     }
     public List<CommitOnModule> queryPathOld(String pathOld) {
-        return commitsOnModule.values().stream().filter(a->a.pathOld.equals(pathOld)).collect(Collectors.toList());
+        return commitsOnModule.values().stream().filter(a -> a.pathOld.equals(pathOld)).collect(Collectors.toList());
     }
     public List<CommitOnModule> queryPathNew(String pathNew) {
-        return commitsOnModule.values().stream().filter(a->a.pathNew.equals(pathNew)).collect(Collectors.toList());
+        return commitsOnModule.values().stream().filter(a -> a.pathNew.equals(pathNew)).collect(Collectors.toList());
     }
-
-    public CommitOnModule put(String idCommitParent, String idCommit, String pathOld, String pathNew, CommitOnModule commitOnModule){
+    public Map<String, Integer> calcPath2TimesCommittedSimultaneously(Commits commitsAll) {
+        //同時にコミットされたファイルパスに対する、同時にコミットされた回数の辞書を取得
+        Map<String, Integer> path2TimesCommittedSimultaneously = new HashMap<>();
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            for (CommitsOnModule commitsOnModuleOfModulesCommittedSimultaneously : commitsAll.get(commitOnModule.idCommit).idParent2Modifications.values()) {
+                for (CommitOnModule commitOnModuleOfModuleCommittedSimultaneously : commitsOnModuleOfModulesCommittedSimultaneously.values()) {
+                    String path = Objects.equals(commitOnModuleOfModuleCommittedSimultaneously.type, "DELETE") ? commitOnModuleOfModuleCommittedSimultaneously.pathOld : commitOnModuleOfModuleCommittedSimultaneously.pathNew;
+                    if (commitsOnModule.values().stream().map(item -> item.pathNew).collect(Collectors.toList()).contains(path))
+                        continue;
+                    if (path2TimesCommittedSimultaneously.containsKey(path)) {
+                        path2TimesCommittedSimultaneously.replace(path, path2TimesCommittedSimultaneously.get(path));
+                    } else {
+                        path2TimesCommittedSimultaneously.put(path, 1);
+                    }
+                }
+            }
+        }
+        return path2TimesCommittedSimultaneously;
+    }
+    public Map<String, Integer> calcAuthor2NumOfChangesLine() {
+        Map<String, Integer> author2NumOfChangesLine = new HashMap<>();
+        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
+            String author = commitOnModule.author;
+            int numOfChangesLine = commitOnModule.calcNumOfChangesLine();
+            if (author2NumOfChangesLine.containsKey(author)) {
+                author2NumOfChangesLine.replace(author, author2NumOfChangesLine.get(author) + numOfChangesLine);
+            } else {
+                author2NumOfChangesLine.put(author, numOfChangesLine);
+            }
+        }
+        return author2NumOfChangesLine;
+    }
+    public CommitOnModule put(String idCommitParent, String idCommit, String pathOld, String pathNew, CommitOnModule commitOnModule) {
         commitsOnModule.put(idCommitParent, idCommit, pathOld, pathNew, commitOnModule);
         return commitOnModule;
     }
     public void excludeCommitsOutOfInterval(int dateBegin, int dateEnd) {
-        commitsOnModule.entrySet().removeIf(entry ->  entry.getValue().date<dateBegin | dateEnd<entry.getValue().date);
+        commitsOnModule.entrySet().removeIf(entry -> entry.getValue().date < dateBegin | dateEnd < entry.getValue().date);
     }
     public void excludeCommitsMerge() {
         commitsOnModule.entrySet().removeIf(entry -> entry.getValue().isMerge);
     }
-    public CommitsOnModule(){}
-    public int size() { return commitsOnModule.size(); }
-    public boolean isEmpty() { return commitsOnModule.isEmpty(); }
-    public boolean containsKey(Object key) { return commitsOnModule.containsKey(key); }
-    public boolean containsValue(Object value) { return commitsOnModule.containsValue(value); }
-    public CommitOnModule get(Object key) { return commitsOnModule.get(key); }
-    public CommitOnModule put(MultiKey<? extends String> key, CommitOnModule value) { return commitsOnModule.put(key, value); }
-    public CommitOnModule remove(Object key) { return commitsOnModule.remove(key); }
-    public void putAll(Map<? extends MultiKey<? extends String>, ? extends CommitOnModule> m) { commitsOnModule.putAll(m); }
-    public void clear(){ commitsOnModule.clear(); }
-    public Set<MultiKey<? extends String>> keySet() { return commitsOnModule.keySet(); }
-    public Collection<CommitOnModule> values(){ return commitsOnModule.values(); }
-    public Set<Map.Entry<MultiKey<? extends String>, CommitOnModule>> entrySet() { return commitsOnModule.entrySet(); }
+    public CommitsOnModule() {
+    }
+    public int size() {
+        return commitsOnModule.size();
+    }
+    public boolean isEmpty() {
+        return commitsOnModule.isEmpty();
+    }
+    public boolean containsKey(Object key) {
+        return commitsOnModule.containsKey(key);
+    }
+    public boolean containsValue(Object value) {
+        return commitsOnModule.containsValue(value);
+    }
+    public CommitOnModule get(Object key) {
+        return commitsOnModule.get(key);
+    }
+    public CommitOnModule put(MultiKey<? extends String> key, CommitOnModule value) {
+        return commitsOnModule.put(key, value);
+    }
+    public CommitOnModule remove(Object key) {
+        return commitsOnModule.remove(key);
+    }
+    public void putAll(Map<? extends MultiKey<? extends String>, ? extends CommitOnModule> m) {
+        commitsOnModule.putAll(m);
+    }
+    public void clear() {
+        commitsOnModule.clear();
+    }
+    public Set<MultiKey<? extends String>> keySet() {
+        return commitsOnModule.keySet();
+    }
+    public Collection<CommitOnModule> values() {
+        return commitsOnModule.values();
+    }
+    public Set<Map.Entry<MultiKey<? extends String>, CommitOnModule>> entrySet() {
+        return commitsOnModule.entrySet();
+    }
+    public void calcMetricsDependentOnFuture(int dateCommitInducingBugsReferableFrom, int dateTarget, int dateCommitFixingBugsReferableUntil) {
+        calcIsBuggy(dateTarget, dateCommitFixingBugsReferableUntil);
+        calcGetBuggy(dateCommitInducingBugsReferableFrom, dateTarget, dateCommitFixingBugsReferableUntil);
+    }
+    public void calcMetricsIndependentOnFuture1(Commits commitsAll, int dateFrom_ReferableToCalculateMetricsIndependentOfFuture, int dateUntil_ReferableToCalculateMetricsIndependentOfFuture) {
+        calcPeriodExisting(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
+        calcPeriodExistingWeighted(dateFrom_ReferableToCalculateMetricsIndependentOfFuture);
+        calcNumOfCommits();
+        calcNumOfCommitsFixingBugs();
+        calcNumOfCommitsRefactoring(commitsAll);
+        calcNumOfBugreportsUnique();
+        calcNumOfCommitsInducingBugs();
+        calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(commitsAll);
+        calcNumOfCommittersUnique();
+        calcNumOfCommittersUnfamiliar();
+        calcNumOfCommittersFamiliar();
+        calcMaxOfRatio_numOfCommitsOfACommitter();
+        calc_maxOfRatio_numOfChangesLineOfACommitter();
+        calcGeometricmean_sumOfChangesLineByTheCommitter();
+        calcMaxOfInterval();
+        calcMinOfInterval();
+        calcAvgOfInterval();
+        calcSumOfAdditionsLine();
+        calcMaxOfAdditionsLine();
+        calcAvgOfAdditionsLine();
+        calcSumOfDeletionsLine();
+        calcMaxOfDeletionsLine();
+        calcAvgOfDeletionsLine();
+        calcSumOfChangesLine();
+        calcSumOfChurnLine();
+        calcMaxOfChurnLine();
+        calcAvgOfChurnLine();
+        calcSumOfAdditionsStatement();
+        calcMaxOfAdditionsStatement();
+        calcAvgOfAdditionsStatement();
+        calcSumOfDeletionsStatement();
+        calcMaxOfDeletionsStatement();
+        calcAvgOfDeletionsStatement();
+        calcSumOfChurnsStatement();
+        calcMaxOfChurnsStatement();
+        calcAvgOfChurnsStatement();
+        calcSumOfChangesStatement();
+        calcMaxOfChangesStatement();
+        calcAvgOfChangesStatement();
+        calcSumOfChangesDeclarationItself();
+        calcSumOfChangesCondition();
+        calcSumOfAdditionStatementElse();
+        calcSumOfDeletionStatementElse();
+        calcSumOfChangesStatementElse();
+        calcComplexityHistory(commitsAll);
+        calcMaxOfModulesCommittedSimultaneously(commitsAll);
+        calcAvgOfModulesCommittedSimultaneously(commitsAll);
+    }
+    public void calcMetricsIndependentOnFuture2(Commits commitsAll, Modules modulesAll) {
+        calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(commitsAll, modulesAll);
+        calcNumOfCommittersUniqueNeighbor(commitsAll, modulesAll);
+        calcNumOfCommitsNeighbor(commitsAll, modulesAll);
+        calcComplexityHistoryNeighbor(commitsAll, modulesAll);
+    }
 }

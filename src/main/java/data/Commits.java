@@ -11,11 +11,14 @@ import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import util.FileUtil;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.*;
+import java.util.stream.Collectors;
 
-import static util.FileUtil.findFiles;
+import static util.FileUtil.findPathsFile;
 import static util.FileUtil.readFile;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
@@ -54,7 +57,7 @@ public class Commits implements Map<String, Commit> {
         }
     }
     public void loadCommitsFromFile(String pathCommits) {
-        List<String> paths = findFiles(pathCommits, "json");
+        List<String> paths = FileUtil.findPathsFile(pathCommits, "json");
         for(String path: ProgressBar.wrap(paths, "loadCommitsFromFile")) {
             try {
                 String strFile = readFile(path);
@@ -68,6 +71,29 @@ public class Commits implements Map<String, Commit> {
                 e.printStackTrace();
             }
         }
+    }
+    public Set<Commit> calcCommitsInBlock(String idCommit) {//前後のコミットを確認して、dateの差が1時間以内なら追加する。再帰的にこれをやる。
+        Set<Commit> commitsInBlock = new HashSet<>();
+        commitsInBlock.add(commits.get(idCommit));
+
+        List<Commit> commitsSorted = commits.values().stream().sorted(Comparator.comparing(Commit::getDate)).collect(Collectors.toList());
+        int dateTarget;
+
+        dateTarget = commits.get(idCommit).date;
+        for(Commit commit: commitsSorted){
+            if(Math.abs(commit.date-dateTarget)<60*60){
+                commitsInBlock.add(commit);
+                dateTarget=commit.date;
+            }
+        }
+        dateTarget = commits.get(idCommit).date;
+        for(Commit commit: commitsSorted.stream().sorted(Comparator.comparing(Commit::getDate).reversed()).collect(Collectors.toList())){
+            if(Math.abs(commit.date-dateTarget)<60*60){
+                commitsInBlock.add(commit);
+                dateTarget=commit.date;
+            }
+        }
+        return commitsInBlock;
     }
     @Override public int size() {
         return commits.size();
@@ -111,4 +137,5 @@ public class Commits implements Map<String, Commit> {
     @Override public int hashCode() {
         return commits.hashCode();
     }
+
 }

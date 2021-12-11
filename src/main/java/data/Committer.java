@@ -1,8 +1,8 @@
 package data;
 
-public class Person {
+public class Committer {
     public String name = null;
-    public Person(String name){
+    public Committer(String name){
         this.name = name;
     }
 }

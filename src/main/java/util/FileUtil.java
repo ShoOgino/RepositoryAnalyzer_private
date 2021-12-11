@@ -21,7 +21,7 @@ public class FileUtil {
         }
         return value;
     }
-    public static List<String> findFiles(String dirRoot, String ext, String subStringToIgnore) {
+    public static List<String> findPathsFile(String dirRoot, String ext, String subStringToIgnore) {
         List<String> pathsFile = new ArrayList<String>();
         try {
             pathsFile.addAll(
@@ -37,8 +37,7 @@ public class FileUtil {
         }
         return pathsFile;
     }
-
-    public static List<String> findFiles(String dirRoot, String ext) {
+    public static List<String> findPathsFile(String dirRoot, String ext) {
         List<String> pathsFile = new ArrayList<String>();
         try {
             pathsFile.addAll(
@@ -55,9 +54,7 @@ public class FileUtil {
         }
         return pathsFile;
     }
-
-
-    public static List<String> findFiles(String[] dirsRoot, String ext, String subStringToIgnore) {
+    public static List<String> findPathsFile(String[] dirsRoot, String ext, String subStringToIgnore) {
         List<String> pathsFile = new ArrayList<String>();
         try {
             for(String dirRoot: dirsRoot) {
