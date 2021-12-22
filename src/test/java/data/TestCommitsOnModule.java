@@ -1,6 +1,5 @@
 package data;
 
-import org.checkerframework.checker.units.qual.C;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -75,11 +74,11 @@ public class TestCommitsOnModule {
         //出力: 2
         CommitsOnModule commitsOnModule = new CommitsOnModule();
         CommitOnModule commitOnModule0 = new CommitOnModule();
-        commitOnModule0.isFix = true;
+        commitOnModule0.IdsCommitsInducingBugsThatThisCommitFixes = Arrays.asList("");
         CommitOnModule commitOnModule1 = new CommitOnModule();
-        commitOnModule1.isFix = false;
+        commitOnModule1.IdsCommitsInducingBugsThatThisCommitFixes = new ArrayList<>();
         CommitOnModule commitOnModule2 = new CommitOnModule();
-        commitOnModule2.isFix = true;
+        commitOnModule2.IdsCommitsInducingBugsThatThisCommitFixes = Arrays.asList("");
         commitsOnModule.put("0","1","","",commitOnModule0);
         commitsOnModule.put("1","2","","",commitOnModule1);
         commitsOnModule.put("2","3","","",commitOnModule2);
@@ -772,7 +771,7 @@ public class TestCommitsOnModule {
         CommitOnModule commitOnModule3 = new CommitOnModule();
         commitOnModule3.author = "b";
         Diff diff3_0 = new Diff();
-        diff2_0.linesBefore = Arrays.asList(1,2);
+        diff3_0.linesBefore = Arrays.asList(1,2);
         diff3_0.linesAfter = Arrays.asList(1,2,3,4);
         commitOnModule3.diffs.add(diff3_0);
         commitsOnModule.put("2","3","a","a", commitOnModule3);
@@ -780,13 +779,13 @@ public class TestCommitsOnModule {
         CommitOnModule commitOnModule4 = new CommitOnModule();
         commitOnModule4.author = "c";
         Diff diff4_0 = new Diff();
-        diff2_0.linesBefore = Arrays.asList(1);
+        diff4_0.linesBefore = Arrays.asList(1);
         diff4_0.linesAfter = Arrays.asList(1,2,3);
         commitOnModule4.diffs.add(diff4_0);
         commitsOnModule.put("3","4","a","a", commitOnModule4);
 
         commitsOnModule.calcSumOfDeletionsLine();
-        assertEquals(10, commitsOnModule.sumOfDeletionsLine);
+        assertEquals(4, commitsOnModule.sumOfDeletionsLine);
     }
     @Test public void testCalcMaxOfDeletionsLine0(){
         //入力
@@ -1335,7 +1334,7 @@ public class TestCommitsOnModule {
         );
         commitsOnModule.put("3","4","a","a", commitOnModule4);
 
-        commitsOnModule.calcSumOfDeletionStatementElse();
+        commitsOnModule.calcSumOfDeletionsStatement();
         assertEquals(4, commitsOnModule.sumOfDeletionsStatement);
     }
     @Test public void testCalcMaxOfDeletionsStatement0(){
@@ -1701,7 +1700,7 @@ public class TestCommitsOnModule {
         commitsOnModule.put("3","4","a","a", commitOnModule4);
 
         commitsOnModule.calcAvgOfChurnsStatement();
-        assertEquals(1, commitsOnModule.avgOfChurnsStatement);
+        assertEquals(1.5, commitsOnModule.avgOfChurnsStatement);
     }
     @Test public void testCalcSumOfChangesStatement0(){
         //入力
@@ -2542,7 +2541,7 @@ public class TestCommitsOnModule {
         //             CommitsOnModule:
         //                 [0]:
         //出力
-        // aの場合 1
+        // aの場合 2
         Commits commits = new Commits();
         Commit commit1 = new Commit();
         commit1.id = "1";
@@ -2562,11 +2561,12 @@ public class TestCommitsOnModule {
         commitOnModule0_1_1.idCommit = "1";
         commitOnModule0_1_1.pathOld = "b";
         commitOnModule0_1_1.pathNew = "b";
+        commitOnModule0_1_1.IdsCommitsInducingBugsThatThisCommitFixes = Arrays.asList("");
         Diff diff0_1_1 = new Diff();
         diff0_1_1.linesAfter=Arrays.asList(1);
         commitOnModule0_1_1.diffs.add(diff0_1_1);
         commitsOnModule0_1.put(commitOnModule0_1_1.idCommitParent, commitOnModule0_1_1.idCommit, commitOnModule0_1_1.pathOld, commitOnModule0_1_1.pathNew, commitOnModule0_1_1);
-        commit1.idParent2Modifications.put(commit1.id, commitsOnModule0_1);
+        commit1.idParent2Modifications.put(commit1.idParentMaster, commitsOnModule0_1);
         commits.put(commit1.id, commit1);
 
         Commit commit2 = new Commit();
@@ -2591,7 +2591,7 @@ public class TestCommitsOnModule {
         diff1_2_1.linesAfter=Arrays.asList(1);
         commitOnModule1_2_1.diffs.add(diff1_2_1);
         commitsOnModule1_2.put(commitOnModule1_2_1.idCommitParent, commitOnModule1_2_1.idCommit, commitOnModule1_2_1.pathOld, commitOnModule1_2_1.pathNew, commitOnModule1_2_1);
-        commit2.idParent2Modifications.put(commit2.id, commitsOnModule1_2);
+        commit2.idParent2Modifications.put(commit2.idParentMaster, commitsOnModule1_2);
         commits.put(commit2.id, commit2);
 
         Commit commit3 = new Commit();
@@ -2608,7 +2608,7 @@ public class TestCommitsOnModule {
         diff2_3_0.linesAfter=Arrays.asList(1);
         commitOnModule2_3_0.diffs.add(diff2_3_0);
         commitsOnModule2_3.put(commitOnModule2_3_0.idCommitParent, commitOnModule2_3_0.idCommit, commitOnModule2_3_0.pathOld, commitOnModule2_3_0.pathNew, commitOnModule2_3_0);
-        commit3.idParent2Modifications.put(commit3.id, commitsOnModule2_3);
+        commit3.idParent2Modifications.put(commit3.idParentMaster, commitsOnModule2_3);
         commits.put(commit3.id, commit3);
 
         Modules modules = new Modules();
@@ -2616,19 +2616,27 @@ public class TestCommitsOnModule {
         moduleA.commitsOnModuleAll = new CommitsOnModule();
         moduleA.commitsOnModuleAll.put(commitOnModule0_1_0.idCommitParent, commitOnModule0_1_0.idCommit, commitOnModule0_1_0.pathOld, commitOnModule0_1_0.pathNew, commitOnModule0_1_0);
         moduleA.commitsOnModuleAll.put(commitOnModule1_2_0.idCommitParent, commitOnModule1_2_0.idCommit, commitOnModule1_2_0.pathOld, commitOnModule1_2_0.pathNew, commitOnModule1_2_0);
+        moduleA.commitsOnModuleInInterval = new CommitsOnModule();
+        moduleA.commitsOnModuleInInterval.put(commitOnModule0_1_0.idCommitParent, commitOnModule0_1_0.idCommit, commitOnModule0_1_0.pathOld, commitOnModule0_1_0.pathNew, commitOnModule0_1_0);
+        moduleA.commitsOnModuleInInterval.put(commitOnModule1_2_0.idCommitParent, commitOnModule1_2_0.idCommit, commitOnModule1_2_0.pathOld, commitOnModule1_2_0.pathNew, commitOnModule1_2_0);
         Module moduleB = new Module();
         moduleB.commitsOnModuleAll = new CommitsOnModule();
         moduleB.commitsOnModuleAll.put(commitOnModule0_1_1.idCommitParent, commitOnModule0_1_1.idCommit, commitOnModule0_1_1.pathOld, commitOnModule0_1_1.pathNew, commitOnModule0_1_1);
         moduleB.commitsOnModuleAll.put(commitOnModule1_2_1.idCommitParent, commitOnModule1_2_1.idCommit, commitOnModule1_2_1.pathOld, commitOnModule1_2_1.pathNew, commitOnModule1_2_1);
+        moduleB.commitsOnModuleInInterval = new CommitsOnModule();
+        moduleB.commitsOnModuleInInterval.put(commitOnModule0_1_1.idCommitParent, commitOnModule0_1_1.idCommit, commitOnModule0_1_1.pathOld, commitOnModule0_1_1.pathNew, commitOnModule0_1_1);
+        moduleB.commitsOnModuleInInterval.put(commitOnModule1_2_1.idCommitParent, commitOnModule1_2_1.idCommit, commitOnModule1_2_1.pathOld, commitOnModule1_2_1.pathNew, commitOnModule1_2_1);
         Module moduleC = new Module();
         moduleC.commitsOnModuleAll = new CommitsOnModule();
         moduleC.commitsOnModuleAll.put(commitOnModule2_3_0.idCommitParent, commitOnModule2_3_0.idCommit, commitOnModule2_3_0.pathOld, commitOnModule2_3_0.pathNew, commitOnModule2_3_0);
+        moduleC.commitsOnModuleInInterval = new CommitsOnModule();
+        moduleC.commitsOnModuleInInterval.put(commitOnModule2_3_0.idCommitParent, commitOnModule2_3_0.idCommit, commitOnModule2_3_0.pathOld, commitOnModule2_3_0.pathNew, commitOnModule2_3_0);
         modules.put("a",moduleA);
         modules.put("b",moduleB);
         modules.put("c",moduleC);
 
-        moduleA.commitsOnModuleAll.calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(commits,modules);
-        assertEquals(1, moduleA.commitsOnModuleAll.numOfCommitsOtherModulesHasBeenBuggyOnTheCommit);
+        moduleA.commitsOnModuleAll.calcNumOfCommitsOtherModulesHasBeenFixedOnTheCommit(commits,modules);
+        assertEquals(2, moduleA.commitsOnModuleAll.numOfCommitsOtherModulesHasBeenFixedOnTheCommit);
     }
     @Test public void testCalcNumOfCommittersUniqueNeighbor(){
         //入力

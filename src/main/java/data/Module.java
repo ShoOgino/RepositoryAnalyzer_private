@@ -16,7 +16,7 @@ import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Data
-public class Module implements Cloneable {
+public class Module  implements Cloneable {
     @JsonIgnore public String id = "";
     public String path = null;
     public CommitsOnModule commitsOnModuleAll = null;
@@ -38,19 +38,7 @@ public class Module implements Cloneable {
         }
         return module;
     }
-    public void calcMetricsCode(){
-        sourcecode.calcMetrics();
-    }
-    public void calcMetricsProcess1(Commits commitsAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture) {
-        int dateFrom_ReferableToCalculateMetricsIndependentOfFuture = commitsAll.get(intervalRevision_referableCalculatingMetricsIndependentOnFuture[0]).date;
-        int dateUntil_ReferableToCalculateMetricsIndependentOfFuture = commitsAll.get(intervalRevision_referableCalculatingMetricsIndependentOnFuture[1]).date;
-        int dateUntil_ReferableToCalculateMetricsDependentOfFuture =commitsAll.get(intervalRevision_referableCalculatingMetricsDependentOnFuture[1]).date;
-        commitsOnModuleAll.calcMetricsDependentOnFuture(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsDependentOfFuture);
-        commitsOnModuleInInterval.calcMetricsIndependentOnFuture1(commitsAll, dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
-    }
-    public void calcMetricsProcess2(Commits commitsAll, Modules modulesAll){
-        commitsOnModuleInInterval.calcMetricsIndependentOnFuture2(commitsAll, modulesAll);
-    }
+
     public void identifyCommitGraphTarget(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
         if(commitsOnModuleInInterval.size()!=0) return;
         Commit commit = commitsAll.get(intervalRevisionMethod_referableCalculatingProcessMetrics[1]);
@@ -76,8 +64,13 @@ public class Module implements Cloneable {
         this.commitsOnModuleInInterval.excludeCommitsOutOfInterval(dateBegin, dateEnd);
         this.commitsOnModuleInInterval.excludeCommitsMerge();
     }
-    public void identifySourcecodeTarget(Repository repositoryMethod, String idCommit) throws IOException {
-        RevCommit revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(idCommit));
+    public void identifySourcecodeTarget(Repository repositoryMethod, String idCommit) {
+        RevCommit revCommit = null;
+        try {
+            revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(idCommit));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
         RevTree tree = revCommit.getTree();
         try (TreeWalk treeWalk = new TreeWalk(repositoryMethod)) {
             treeWalk.addTree(tree);
@@ -87,42 +80,98 @@ public class Module implements Cloneable {
                 ObjectLoader loader = repositoryMethod.open(treeWalk.getObjectId(0));
                 this.sourcecode = new Sourcecode(new String(loader.getBytes()));
             }
+        }catch (IOException exception) {
+            exception.printStackTrace();
         }
     }
+
     public void calcAST() { sourcecode.calcAST(); }
+    public void calcMetricsCode(String selection){
+        sourcecode.calcMetrics(selection);
+    }
     public void calcCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors) {
         commitsOnModuleInInterval.calcMetricsOnEachNode();
         commitsOnModuleInInterval.calcVectorsOnEachNode(commitsAll, modulesAll, authors);
     }
-    public String outputRow(){
-        String row =
-                "\"" + path + "\"" + ", " +
-                commitsOnModuleAll.isBuggy + ", " +
-                sourcecode.fanin + ", " +
-                sourcecode.fanout + ", " +
-                sourcecode.numOfVariablesLocal + ", " +
-                sourcecode.numOfParameters + ", "+
-                sourcecode.ratioOfLinesComment + ", "+
-                sourcecode.numOfPaths + ", "+
-                sourcecode.complexity + ", "+
-                sourcecode.numOfStatements + ", "+
-                sourcecode.maxOfNesting + ", "+
-                commitsOnModuleInInterval.numOfCommits + ", "+
-                commitsOnModuleInInterval.numOfCommittersUnique + ", "+
-                commitsOnModuleInInterval.sumOfAdditionsStatement + ", "+
-                commitsOnModuleInInterval.maxOfAdditionsStatement + ", "+
-                commitsOnModuleInInterval.avgOfAdditionsStatement + ", "+
-                commitsOnModuleInInterval.sumOfDeletionsStatement + ", "+
-                commitsOnModuleInInterval.maxOfDeletionsStatement + ", "+
-                commitsOnModuleInInterval.avgOfDeletionsStatement + ", "+
-                commitsOnModuleInInterval.sumOfChurnsStatement + ", "+
-                commitsOnModuleInInterval.maxOfChurnsStatement + ", "+
-                commitsOnModuleInInterval.avgOfChurnsStatement + ", "+
-                commitsOnModuleInInterval.sumOfChangesDeclarationItself + ", "+
-                commitsOnModuleInInterval.sumOfChangesCondition + ", "+
-                commitsOnModuleInInterval.sumOfAdditionStatementElse + ", "+
-                commitsOnModuleInInterval.sumOfDeletionStatementElse + ", " + "\n";
-        return row;
+    public void calcMetricsProcess1(Commits commitsAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture, String selection) {
+        int dateFrom_ReferableToCalculateMetricsIndependentOfFuture = commitsAll.get(intervalRevision_referableCalculatingMetricsIndependentOnFuture[0]).date;
+        int dateUntil_ReferableToCalculateMetricsIndependentOfFuture = commitsAll.get(intervalRevision_referableCalculatingMetricsIndependentOnFuture[1]).date;
+        int dateUntil_ReferableToCalculateMetricsDependentOfFuture =commitsAll.get(intervalRevision_referableCalculatingMetricsDependentOnFuture[1]).date;
+        commitsOnModuleAll.calcMetricsDependentOnFuture(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsDependentOfFuture, selection);
+        commitsOnModuleInInterval.calcMetricsIndependentOnFuture1(commitsAll, dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture, selection);
+    }
+    public void calcMetricsProcess2(Commits commitsAll, Modules modulesAll){
+        commitsOnModuleInInterval.calcMetricsIndependentOnFuture2(commitsAll, modulesAll);
     }
 
+    public String outputRow(String selection){
+        if(Objects.equals(selection, "ming")) {
+            String row = "\"" + path + "\"" + ", " +
+                    commitsOnModuleAll.isBuggy + ", " +
+
+                    commitsOnModuleInInterval.numOfCommits + ", " +
+                    commitsOnModuleInInterval.numOfCommittersUnique + ", " +
+                    commitsOnModuleInInterval.sumOfAdditionsLine + ", " +
+                    commitsOnModuleInInterval.sumOfDeletionsLine + ", " +
+                    commitsOnModuleInInterval.maxOfRatio_numOfChangesLineOfACommitter + ", " +
+                    commitsOnModuleInInterval.numOfCommittersUnfamiliar + ", " +
+                    commitsOnModuleInInterval.complexityHistory + ", " +
+                    commitsOnModuleInInterval.numOfCommitsNeighbor + ", " +
+                    commitsOnModuleInInterval.numOfCommittersUniqueNeighbor + ", " +
+                    commitsOnModuleInInterval.complexityHistoryNeighbor + ", " +
+                    commitsOnModuleInInterval.geometricmean_sumOfChangesLineByTheCommitter + ", " +
+
+                    commitsOnModuleInInterval.numOfCommitsRefactoring + ", " +
+                    commitsOnModuleInInterval.numOfCommitsFixingBugs + ", " +
+                    commitsOnModuleInInterval.maxOfAdditionsLine + ", " +
+                    commitsOnModuleInInterval.avgOfAdditionsLine + ", " +
+                    commitsOnModuleInInterval.maxOfDeletionsLine + ", " +
+                    commitsOnModuleInInterval.avgOfDeletionsLine + ", " +
+                    commitsOnModuleInInterval.sumOfChurnLine + ", " +
+                    commitsOnModuleInInterval.maxOfChurnLine + ", " +
+                    commitsOnModuleInInterval.avgOfChurnLine + ", " +
+                    commitsOnModuleInInterval.maxOfModulesCommittedSimultaneously + ", " +
+                    commitsOnModuleInInterval.avgOfModulesCommittedSimultaneously + ", " +
+                    commitsOnModuleInInterval.periodExisting + ", " +
+                    commitsOnModuleInInterval.periodExistingWeighted + ", " +
+
+                    commitsOnModuleInInterval.sumOfChangesDeclarationItself + ", " +
+                    commitsOnModuleInInterval.sumOfChangesStatement + ", " +
+                    commitsOnModuleInInterval.sumOfChangesCondition + ", " +
+                    commitsOnModuleInInterval.sumOfChangesStatementElse + "\n";
+            return row;
+        }else if(Objects.equals(selection, "giger")){
+            String row =
+                    "\"" + path + "\"" + ", " +
+                    commitsOnModuleAll.isBuggy + ", " +
+
+                    sourcecode.fanin + ", " +
+                    sourcecode.fanout + ", " +
+                    sourcecode.numOfVariablesLocal + ", " +
+                    sourcecode.numOfParameters + ", "+
+                    sourcecode.ratioOfLinesComment + ", "+
+                    sourcecode.numOfPaths + ", "+
+                    sourcecode.complexity + ", "+
+                    sourcecode.numOfStatements + ", "+
+                    sourcecode.maxOfNesting + ", "+
+
+                    commitsOnModuleInInterval.numOfCommits + ", "+
+                    commitsOnModuleInInterval.numOfCommittersUnique + ", "+
+                    commitsOnModuleInInterval.sumOfAdditionsStatement + ", "+
+                    commitsOnModuleInInterval.maxOfAdditionsStatement + ", "+
+                    commitsOnModuleInInterval.avgOfAdditionsStatement + ", "+
+                    commitsOnModuleInInterval.sumOfDeletionsStatement + ", "+
+                    commitsOnModuleInInterval.maxOfDeletionsStatement + ", "+
+                    commitsOnModuleInInterval.avgOfDeletionsStatement + ", "+
+                    commitsOnModuleInInterval.sumOfChurnsStatement + ", "+
+                    commitsOnModuleInInterval.maxOfChurnsStatement + ", "+
+                    commitsOnModuleInInterval.avgOfChurnsStatement + ", "+
+                    commitsOnModuleInInterval.sumOfChangesDeclarationItself + ", "+
+                    commitsOnModuleInInterval.sumOfChangesCondition + ", "+
+                    commitsOnModuleInInterval.sumOfAdditionStatementElse + ", "+
+                    commitsOnModuleInInterval.sumOfDeletionStatementElse + "\n";
+            return row;
+        }
+        return "";
+    }
 }

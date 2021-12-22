@@ -13,7 +13,6 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -31,8 +30,21 @@ import static util.FileUtil.readFile;
 import static util.RepositoryUtil.checkoutRepository;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-public class Modules implements Map<String, Module> {
+public class Modules extends Thread implements Map<String, Module> {
     LinkedHashMap<String, Module> modules = new LinkedHashMap<>();
+
+    public  Modules(){ }
+
+    public Modules(List<Module> modules, Commits commitsAll, Modules modulesAll, Committers committersAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture) {
+        for(Module module:modules) {
+            this.modules.put(module.path, module);
+        }
+        this.commitsAll = commitsAll;
+        this.modulesAll = modulesAll;
+        this.committersAll = committersAll;
+        this.intervalRevision_referableCalculatingMetricsIndependentOnFuture = intervalRevision_referableCalculatingMetricsIndependentOnFuture;
+        this.intervalRevision_referableCalculatingMetricsDependentOnFuture = intervalRevision_referableCalculatingMetricsDependentOnFuture;
+    }
     public int getIdModule(String pathNew) {
         List<String> paths = new ArrayList<>(modules.keySet());
         return paths.indexOf(pathNew);
@@ -157,17 +169,25 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-    public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget) throws IOException, GitAPIException {
+    public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget){
         List<String> pathSources = new ArrayList<>();
-        RevCommit revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(commitTarget));
+        RevCommit revCommit = null;
+        try {
+            revCommit = repositoryMethod.parseCommit(repositoryMethod.resolve(commitTarget));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
         RevTree tree = revCommit.getTree();
         try (TreeWalk treeWalk = new TreeWalk(repositoryMethod)) {
             treeWalk.addTree(tree);
             treeWalk.setRecursive(true);
             treeWalk.setFilter(PathSuffixFilter.create(".mjava"));
-            while (treeWalk.next()) {
+            while (true) {
+                if (!treeWalk.next()) break;
                 pathSources.add(treeWalk.getPathString());
             }
+        }catch(Exception e){
+            e.printStackTrace();
         }
         for (String pathSource : ProgressBar.wrap(pathSources, "identifyTargetModules")) {
             Module moduleTarget = modulesAll.get(pathSource).clone();
@@ -176,11 +196,30 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
+    public void identifyCommitsOnModuleInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture) {
+        for(Module module: modules.values()){
+            module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture);
+        }
+    }
     public void calculateAST(Repository repositoryMethod, String revisionMethodTarget)  {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateAST")) {
             Module module = modules.get(pathModule);
             module.calcAST();
         }
+    }
+    Commits commitsAll;
+    Modules modulesAll;
+    Committers committersAll;
+    String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture;
+    String[] intervalRevision_referableCalculatingMetricsDependentOnFuture;
+    public void run()  {
+        System.out.println("thread started");
+        for(Module module:ProgressBar.wrap(modules.values(), "run")){
+            module.identifyCommitGraphTarget(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture);
+            module.calcCommitGraph(commitsAll, modulesAll, committersAll);
+            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture);
+        }
+        System.out.println("thread ends");
     }
     public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics)  {
         for (Module module : ProgressBar.wrap(modules.values(), "calculateCommitGraph")) {
@@ -188,12 +227,12 @@ public class Modules implements Map<String, Module> {
             module.calcCommitGraph(commitsAll, modulesAll, authors);
         }
     }
-    public void calculateMetricsCode(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget) throws IOException, GitAPIException {
+    public void calculateMetricsCode(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget, String selection){
         checkoutRepository(repositoryFile, revisionFileTarget);
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcCodeMetrics")) {
             Module module = modules.get(pathModule);
             module.identifySourcecodeTarget(repositoryMethod, revisionMethodTarget);
-            module.calcMetricsCode();
+            module.calcMetricsCode(selection);
         }
         //fanInを計測
         try {
@@ -234,15 +273,15 @@ public class Modules implements Map<String, Module> {
             exception.printStackTrace();
         }
     }
-    public void calculateMetricsProcess(Commits commitsAll, Modules modulesAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture) {
+    public void calculateMetricsProcess(Commits commitsAll, Modules modulesAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture, String selection) {
         for (Module module : ProgressBar.wrap(modules.values(), "identifing commitGraph To calculate process metrics")) {
             module.identifyCommitGraphTarget(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture);
         }
         for (Module module : ProgressBar.wrap(modules.values(), "calcProcessMetrics1")) {
-            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture);
+            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture, selection);
         }
         for (Module module : ProgressBar.wrap(modules.values(), "calcProcessMetrics2")) {
-            module.calcMetricsProcess2(commitsAll, modulesAll);
+            module.calcMetricsProcess2(commitsAll, modulesAll, selection);
         }
     }
     public void saveAsJson(String pathModules) {
@@ -269,18 +308,22 @@ public class Modules implements Map<String, Module> {
             }
         }
     }
-    public void saveAsCSV(String pathOutput) throws IOException {
+    public void saveAsCSV(String pathOutput, String selection){
         File dir = new File(pathOutput);
         File dirParent = new File(dir.getParent());
         dirParent.mkdirs();
 
         File file = new File(pathOutput);
-        FileWriter fileWriter = new FileWriter(file);
-        fileWriter.write("");
-        for(Module module: modules.values()){
-            fileWriter.write(module.outputRow());
+        try {
+            FileWriter fileWriter = new FileWriter(file);
+            fileWriter.write("");
+            for (Module module : modules.values()) {
+                fileWriter.write(module.outputRow(selection));
+            }
+            fileWriter.close();
+        }catch(Exception e){
+            e.printStackTrace();
         }
-        fileWriter.close();
     }
     public void loadModulesFromFile(String pathModules) {
         List<String> paths = FileUtil.findPathsFile(pathModules, ".json");
@@ -337,4 +380,5 @@ public class Modules implements Map<String, Module> {
     @Override public Set<Entry<String, Module>> entrySet() {
         return modules.entrySet();
     }
+
 }

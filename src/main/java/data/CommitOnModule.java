@@ -166,18 +166,18 @@ public class CommitOnModule {
 			}
 		}
 	}
-	int numOfModulesHasBeenBuggyOnTheCommit = 0;
-	public void calcNumOfModulesHasBeenBuggyOnTheCommit(Commits commitsAll, Modules modulesAll){
+	int numOfModulesHasBeenFixedOnTheCommit = 0;
+	public void calcNumOfModulesHasBeenFixedOnTheCommit(Commits commitsAll, Modules modulesAll){
 		int numOfModulesHasBeenBuggyOnTheCommitTemp=0;
 		Commit commit = commitsAll.get(this.idCommit);
 		CommitsOnModule commitsOnModuleInTheCommit = commit.idParent2Modifications.get(commit.idParentMaster);
 		for(CommitOnModule commitOnModuleInTheCommit: commitsOnModuleInTheCommit.values()){
 			String path = Objects.equals(commitOnModuleInTheCommit.type, "DELETE") ? commitOnModuleInTheCommit.pathOld : commitOnModuleInTheCommit.pathNew;
-			if(modulesAll.get(path).commitsOnModuleInInterval.calcHasBeenBuggy()==1){
+			if(modulesAll.get(path).commitsOnModuleInInterval.calcHasBeenFixed()==1){
 				numOfModulesHasBeenBuggyOnTheCommitTemp++;
 			}
 		}
-		this.numOfModulesHasBeenBuggyOnTheCommit = numOfModulesHasBeenBuggyOnTheCommitTemp;
+		this.numOfModulesHasBeenFixedOnTheCommit = numOfModulesHasBeenBuggyOnTheCommitTemp;
 	}
 	int numOfModulesGetBuggyOnTheCommit = 0;
 	public void calcNumOfModulesGetBuggyOnTheCommit(Commits commitsAll){
@@ -382,6 +382,7 @@ public class CommitOnModule {
 				}
 			}
 		}
+		if(type==0) type=2;
 		if(type==1)vectorType[0]=1;
 		else if(type==2)vectorType[1]=1;
 		else if(type==3)vectorType[2]=1;
@@ -389,8 +390,11 @@ public class CommitOnModule {
 	}
 	int[] vectorCodeChurn=new int[3];
 	public void calcVectorCodeChurn() {
+		calcNumOfAdditionsLine();
 		vectorCodeChurn[0] = this.numOfAdditionsLine;
+		calcNumOfDeletionsLine();
 		vectorCodeChurn[1] = this.numOfDeletionsLine;
+		calcNumOfChurnLine();
 		vectorCodeChurn[2] = this.numOfChurnLine;
 	}
 	int[] vectorCochange;
@@ -407,7 +411,6 @@ public class CommitOnModule {
 			}
 		}
 	}
-
 
 	public void calcMetrics(){
 		calcNumOfAdditionsStatement();
@@ -534,5 +537,4 @@ public class CommitOnModule {
 		}
 		return distiller.getSourceCodeChanges();
 	}
-
 }

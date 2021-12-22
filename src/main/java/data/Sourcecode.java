@@ -8,6 +8,7 @@ import org.eclipse.jdt.core.dom.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Sourcecode {
@@ -96,16 +97,18 @@ public class Sourcecode {
         this.rawdata = rawdata;
         calcCompilationUnit();
     }
-    public void calcMetrics() {
-        calcNumOfLines();
-        calcFanOut();
-        calcParameters();
-        calcLocalVar();
-        calcCommentRatio();
-        calcCountPath();
-        calcComplexity();
-        calcExecStmt();
-        calcMaxNesting();
+    public void calcMetrics(String selection) {
+        if(Objects.equals(selection, "giger")) {
+            calcNumOfLines();
+            calcFanOut();
+            calcParameters();
+            calcLocalVar();
+            calcCommentRatio();
+            calcCountPath();
+            calcComplexity();
+            calcExecStmt();
+            calcMaxNesting();
+        }
     }
     public void calcCompilationUnit() {
         String sourceClass = "public class Dummy{" + this.rawdata + "}";

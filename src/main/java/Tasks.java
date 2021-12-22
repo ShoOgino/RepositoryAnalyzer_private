@@ -46,7 +46,7 @@ public class Tasks {
             taskToAnalyzeProject.name = "analyzeProject";
             taskToAnalyzeProject.pathProject = pathProject;
             taskToAnalyzeProject.granularity = "method";
-            taskToAnalyzeProject.product = Arrays.asList("commit", "module", "bug");
+            taskToAnalyzeProject.product = Arrays.asList("commit", "committers", "module", "bug");
             taskToAnalyzeProject.call();
 
             //プロジェクト情報を他のタスクに参照させる

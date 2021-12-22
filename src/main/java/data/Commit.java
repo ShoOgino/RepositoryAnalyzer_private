@@ -15,7 +15,6 @@ public class Commit {
 	public boolean isMerge = false;
 	public Map<String, CommitsOnModule> idParent2Modifications = new HashMap<>();
 	public String idParentMaster = null;
-	public List<String> children = new ArrayList<>();
 	public Commit() {
 	}
 

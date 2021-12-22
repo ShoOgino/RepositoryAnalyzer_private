@@ -14,7 +14,6 @@ import org.eclipse.jgit.revwalk.RevWalk;
 import util.FileUtil;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -72,9 +71,20 @@ public class Commits implements Map<String, Commit> {
             }
         }
     }
-    public Set<Commit> calcCommitsInBlock(String idCommit) {//前後のコミットを確認して、dateの差が1時間以内なら追加する。再帰的にこれをやる。
-        Set<Commit> commitsInBlock = new HashSet<>();
-        commitsInBlock.add(commits.get(idCommit));
+    public List<Set<Commit>> calcListCommitsInBlock(Set<String> idsCommit) {
+        List<Set<Commit>> listCommitsInABlock = new ArrayList<>();
+        List<String> idsCommitProcessed = new ArrayList<>();
+        for(String idCommit: idsCommit){
+            Set<Commit> commitsInABlock = calcCommitsInABlock(idCommit);
+            if(commitsInABlock.stream().anyMatch(item -> idsCommitProcessed.contains(item.id))) continue;
+            listCommitsInABlock.add(commitsInABlock);
+            idsCommitProcessed.add(idCommit);
+        }
+        return  listCommitsInABlock;
+    }
+    private Set<Commit> calcCommitsInABlock(String idCommit) {
+        Set<Commit> commitsInABlock = new HashSet<>();
+        commitsInABlock.add(commits.get(idCommit));
 
         List<Commit> commitsSorted = commits.values().stream().sorted(Comparator.comparing(Commit::getDate)).collect(Collectors.toList());
         int dateTarget;
@@ -82,18 +92,18 @@ public class Commits implements Map<String, Commit> {
         dateTarget = commits.get(idCommit).date;
         for(Commit commit: commitsSorted){
             if(Math.abs(commit.date-dateTarget)<60*60){
-                commitsInBlock.add(commit);
+                commitsInABlock.add(commit);
                 dateTarget=commit.date;
             }
         }
         dateTarget = commits.get(idCommit).date;
         for(Commit commit: commitsSorted.stream().sorted(Comparator.comparing(Commit::getDate).reversed()).collect(Collectors.toList())){
             if(Math.abs(commit.date-dateTarget)<60*60){
-                commitsInBlock.add(commit);
+                commitsInABlock.add(commit);
                 dateTarget=commit.date;
             }
         }
-        return commitsInBlock;
+        return commitsInABlock;
     }
     @Override public int size() {
         return commits.size();

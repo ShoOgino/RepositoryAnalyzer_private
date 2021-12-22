@@ -31,16 +31,15 @@ public class CommitsOnModule  implements Cloneable {
     }
     int getBuggy = 0;
     public void calcGetBuggy(int dateCommitInducingBugsReferableFrom, int dateTarget, int dateCommitFixingBugsReferableUntil) {
-
     }
     // future-independent metrics
-    int hasBeenBuggy=0;
-    public int calcHasBeenBuggy(){
+    int hasBeenFixed =0;
+    public int calcHasBeenFixed(){
         for(CommitOnModule commitOnModule:commitsOnModule.values()){
             commitOnModule.calcIsFix();
-            if(commitOnModule.isFix){
-                hasBeenBuggy=1;
-                return hasBeenBuggy;
+            if(0 < commitOnModule.IdsCommitsInducingBugsThatThisCommitFixes.size()){
+                hasBeenFixed =1;
+                return hasBeenFixed;
             }
         }
         return 0;
@@ -64,6 +63,7 @@ public class CommitsOnModule  implements Cloneable {
             periodExistingWeightedTemp += age*commitOnModule.numOfAdditionsLine;
             numOfAdditionsLineAll += commitOnModule.numOfAdditionsLine;
         }
+        if(numOfAdditionsLineAll==0)return;
         periodExistingWeighted = periodExistingWeightedTemp/(double)numOfAdditionsLineAll;
     }
     int numOfCommits = 0;
@@ -74,6 +74,7 @@ public class CommitsOnModule  implements Cloneable {
     public void calcNumOfCommitsNeighbor(Commits commitsAll, Modules modulesAll) {
         double numOfCommitsNeighborTemp = 0;
         Map<String, Integer> path2TimesCommittedSimultaneously = calcPath2TimesCommittedSimultaneously(commitsAll);
+        if(path2TimesCommittedSimultaneously.size()==0)return;
         int numOfCommitOnModulesCommittedSimltaneouslyAll = 0;
         for (String path : path2TimesCommittedSimultaneously.keySet()) {
             numOfCommitOnModulesCommittedSimltaneouslyAll += path2TimesCommittedSimultaneously.get(path);
@@ -121,16 +122,16 @@ public class CommitsOnModule  implements Cloneable {
         }
         numOfCommitsInducingBugs = numOfCommitsInducingBugsTemp;
     }
-    int numOfCommitsOtherModulesHasBeenBuggyOnTheCommit = 0;
-    public void calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(Commits commitsAll, Modules modulesAll) {
+    int numOfCommitsOtherModulesHasBeenFixedOnTheCommit = 0;
+    public void calcNumOfCommitsOtherModulesHasBeenFixedOnTheCommit(Commits commitsAll, Modules modulesAll) {
         int numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp = 0;
         for (CommitOnModule commitOnModule : this.commitsOnModule.values()) {
-            commitOnModule.calcNumOfModulesHasBeenBuggyOnTheCommit(commitsAll, modulesAll);
-            if (0 < commitOnModule.numOfModulesHasBeenBuggyOnTheCommit) {
+            commitOnModule.calcNumOfModulesHasBeenFixedOnTheCommit(commitsAll, modulesAll);
+            if (0 < commitOnModule.numOfModulesHasBeenFixedOnTheCommit) {
                 numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp++;
             }
         }
-        this.numOfCommitsOtherModulesHasBeenBuggyOnTheCommit = numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp;
+        this.numOfCommitsOtherModulesHasBeenFixedOnTheCommit = numOfCommitsOtherModulesHasBeenBuggyOnTheCommitTemp;
     }
     int numOfCommitsOtherModulesGetBuggyOnTheCommit = 0;
     public void calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(Commits commitsAll) {
@@ -155,6 +156,7 @@ public class CommitsOnModule  implements Cloneable {
     public void calcNumOfCommittersUniqueNeighbor(Commits commitsAll, Modules modulesAll) {
         double numOfCommittersUniqueNeighborTemp = 0;
         Map<String, Integer> path2TimesCommittedSimultaneously = calcPath2TimesCommittedSimultaneously(commitsAll);
+        if(path2TimesCommittedSimultaneously.size()==0)return;
         int numOfCommitOnModulesCommittedSimltaneouslyAll = 0;
         for (String path : path2TimesCommittedSimultaneously.keySet()) {
             numOfCommitOnModulesCommittedSimltaneouslyAll += path2TimesCommittedSimultaneously.get(path);
@@ -223,12 +225,14 @@ public class CommitsOnModule  implements Cloneable {
             }
         }
         calcSumOfChangesLine();
+        if(this.sumOfChangesLine==0) return;
         this.maxOfRatio_numOfChangesLineOfACommitter = maxOfNumOfChangesByAnAuthor / (double) this.sumOfChangesLine;
     }
     double geometricmean_sumOfChangesLineByTheCommitter = 0;
     public void calcGeometricmean_sumOfChangesLineByTheCommitter() {
         double temp = 1;
         Map<String, Integer> author2NumOfChangesLine = calcAuthor2NumOfChangesLine();
+        if(author2NumOfChangesLine.size()==0)return;
         for (Integer numOfChangesLine : author2NumOfChangesLine.values()) {
             temp *= numOfChangesLine;
         }
@@ -301,6 +305,7 @@ public class CommitsOnModule  implements Cloneable {
     }
     double avgOfAdditionsLine = 0;
     public void calcAvgOfAdditionsLine() {
+        if(0==commitsOnModule.size())return;
         int sumOfAdditionsLineTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcNumOfAdditionsLine();
@@ -330,6 +335,7 @@ public class CommitsOnModule  implements Cloneable {
     }
     double avgOfDeletionsLine = 0;
     public void calcAvgOfDeletionsLine() {
+        if(0==commitsOnModule.size())return;
         int sumOfDeletionsLineTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcNumOfDeletionsLine();
@@ -365,6 +371,7 @@ public class CommitsOnModule  implements Cloneable {
     }
     double avgOfChurnLine = 0;
     public void calcAvgOfChurnLine() {
+        if(commitsOnModule.size()==0)return;
         int sumOfChurnLineTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             commitOnModule.calcNumOfChurnLine();
@@ -519,15 +526,10 @@ public class CommitsOnModule  implements Cloneable {
     }
     double complexityHistory = 0;
     public void calcComplexityHistory(Commits commits) {
-        if (this.complexityHistory != 0) return;//計算結果は再利用できる。このメトリクスの計算コストはでかいので、計算は１回だけにする。ちょっと書き方が汚い気がするけど良し。
         List<Double> entropiesOnCommitsAndModule = new ArrayList<>();
-        List<String> idsCommitProcessed = new ArrayList<>();
-        for (CommitOnModule commitOnModule : commitsOnModule.values()) {
-            // このCommitOnModuleが所属する部分コミット列を取得する
-            Set<Commit> commitsInBlock = commits.calcCommitsInBlock(commitOnModule.idCommit);
-            List<Commit> test = commitsInBlock.stream().filter(item->idsCommitProcessed.contains(item.id)).collect(Collectors.toList());
-            if(0<test.size()) continue;
-            // 部分コミット列について、entropyOnCommitsを算出
+        List<Set<Commit>> listCommitsInABlock = commits.calcListCommitsInBlock(commitsOnModule.values().stream().map(item->item.idCommit).collect(Collectors.toSet()));
+        for(Set<Commit> commitsInBlock: listCommitsInABlock){
+            //　コミットブロックについて、entropyOnCommitsを算出
             Map<String, Integer> path2ChangesLine = new HashMap<>();
             for (Commit commit : commitsInBlock) {
                 for (CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()) {
@@ -537,38 +539,33 @@ public class CommitsOnModule  implements Cloneable {
                         if (path2ChangesLine.containsKey(path)) {
                             path2ChangesLine.replace(path, path2ChangesLine.get(path) + commitOnModule1.numOfChangesLine);
                         } else {
-                            if (commitOnModule1.numOfChangesLine == 0) {
-                            } else {
-                                path2ChangesLine.put(path, commitOnModule1.numOfChangesLine);
-                            }
+                            path2ChangesLine.put(path, commitOnModule1.numOfChangesLine);
                         }
                     }
                 }
             }
-            if (path2ChangesLine.size() == 1) continue;
             double entropyOnCommits = 0;
-            int numOfChangesAll = 0;
+            int numOfChangesAll = path2ChangesLine.values().stream().mapToInt(val->val).sum();
             for (int numOfChangesTheModule : path2ChangesLine.values()) {
-                numOfChangesAll += numOfChangesTheModule;
-            }
-            for (int numOfChangesTheModule : path2ChangesLine.values()) {
+                if(numOfChangesTheModule == 0) continue; //renameだけの場合とか
+                if (path2ChangesLine.size() < 2) continue;
                 double p = numOfChangesTheModule / (double) numOfChangesAll;
                 double log_n_p = Math.log(p) / Math.log(path2ChangesLine.size());
                 double temp = Math.abs(p * log_n_p);
                 entropyOnCommits += temp;
             }
-            // そのモジュールについて、HCPF_3を算出
+            // コミットブロックについて、HCPF_3を算出
             double entropyOnCommitsAndModule = entropyOnCommits / (double) path2ChangesLine.size();
             entropiesOnCommitsAndModule.add(entropyOnCommitsAndModule);
-            idsCommitProcessed.add(commitOnModule.idCommit);
         }
-        // そのモジュールについてHCM_3sを算出(HCPF_3を単純に足し合わせる)
+        // モジュールについてHCM_3sを算出(そのモジュールへのコミットが属するコミットブロックのHCPF_3を足し合わせる)
         this.complexityHistory = entropiesOnCommitsAndModule.stream().mapToDouble(val -> val).sum();
     }
     double complexityHistoryNeighbor = 0;
     public void calcComplexityHistoryNeighbor(Commits commitsAll, Modules modulesAll) {
         double complexityHistoryNeighborTemp = 0;
         Map<String, Integer> path2TimesCommittedSimultaneously = calcPath2TimesCommittedSimultaneously(commitsAll);
+        if(path2TimesCommittedSimultaneously.size()==0)return;
         int numOfCommitsByAllCommitters = 0;
         for (String path : path2TimesCommittedSimultaneously.keySet()) {
             numOfCommitsByAllCommitters += path2TimesCommittedSimultaneously.get(path);
@@ -592,6 +589,7 @@ public class CommitsOnModule  implements Cloneable {
     }
     double avgOfModulesCommittedSimultaneously = 0;
     public void calcAvgOfModulesCommittedSimultaneously(Commits commitsAll) {
+        if(0==commitsOnModule.size())return;
         int sumOfModulesCommittedSimultaneouslyTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             Commit commit = commitsAll.get(commitOnModule.idCommit);
@@ -715,16 +713,20 @@ public class CommitsOnModule  implements Cloneable {
     public Set<Map.Entry<MultiKey<? extends String>, CommitOnModule>> entrySet() {
         return commitsOnModule.entrySet();
     }
-    public void calcMetricsDependentOnFuture(int dateCommitInducingBugsReferableFrom, int dateTarget, int dateCommitFixingBugsReferableUntil) {
+    public void calcMetricsDependentOnFuture(int dateCommitInducingBugsReferableFrom, int dateTarget, int dateCommitFixingBugsReferableUntil, String selection) {
         calcIsBuggy(dateTarget, dateCommitFixingBugsReferableUntil);
         calcGetBuggy(dateCommitInducingBugsReferableFrom, dateTarget, dateCommitFixingBugsReferableUntil);
     }
-    public void calcMetricsIndependentOnFuture1(Commits commitsAll, int dateFrom_ReferableToCalculateMetricsIndependentOfFuture, int dateUntil_ReferableToCalculateMetricsIndependentOfFuture) {
-        calcPeriodExisting(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
-        calcPeriodExistingWeighted(dateFrom_ReferableToCalculateMetricsIndependentOfFuture);
-        calcNumOfCommits();
-        calcNumOfCommitsFixingBugs();
-        calcNumOfCommitsRefactoring(commitsAll);
+    public void calcMetricsIndependentOnFuture1(Commits commitsAll, int dateFrom_ReferableToCalculateMetricsIndependentOfFuture, int dateUntil_ReferableToCalculateMetricsIndependentOfFuture, String selection) {
+        if(Arrays.asList("all", "giger").contains(selection))
+        if(Arrays.asList("all", "ming").contains(selection))
+        if(Arrays.asList("all", "hata").contains(selection))
+        if(Arrays.asList("all").contains(selection))
+            if(Arrays.asList("all", "ming", "hata").contains(selection)) calcPeriodExisting(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
+        if(Arrays.asList("all", "ming").contains(selection)) calcPeriodExistingWeighted(dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
+        if(Arrays.asList("all", "ming", "hata").contains(selection)) calcNumOfCommits();
+        if(Arrays.asList("all", "ming", "hata").contains(selection)) calcNumOfCommitsFixingBugs();
+        if(Arrays.asList("all", "ming").contains(selection)) calcNumOfCommitsRefactoring(commitsAll);
         calcNumOfBugreportsUnique();
         calcNumOfCommitsInducingBugs();
         calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(commitsAll);
@@ -769,7 +771,7 @@ public class CommitsOnModule  implements Cloneable {
         calcAvgOfModulesCommittedSimultaneously(commitsAll);
     }
     public void calcMetricsIndependentOnFuture2(Commits commitsAll, Modules modulesAll) {
-        calcNumOfCommitsOtherModulesHasBeenBuggyOnTheCommit(commitsAll, modulesAll);
+        calcNumOfCommitsOtherModulesHasBeenFixedOnTheCommit(commitsAll, modulesAll);
         calcNumOfCommittersUniqueNeighbor(commitsAll, modulesAll);
         calcNumOfCommitsNeighbor(commitsAll, modulesAll);
         calcComplexityHistoryNeighbor(commitsAll, modulesAll);

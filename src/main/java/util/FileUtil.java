@@ -1,7 +1,9 @@
 package util;
 
 import data.Commit;
+import org.apache.commons.io.FileUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -20,6 +22,28 @@ public class FileUtil {
             e.printStackTrace();
         }
         return value;
+    }
+    public static void copyDirectory(final String pathOriginal, String pathCopy){
+        File fileOriginal = new File(pathOriginal);
+        File fileCopy = new File(pathCopy);
+        try {
+            FileUtils.deleteDirectory(fileCopy);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+        try {
+            FileUtils.copyDirectory(fileOriginal, fileCopy);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+    }
+    public static void deleteDirectory(String pathRepositoryFileCopy) {
+        try {
+            File fileRepositoryFileCopy = new File(pathRepositoryFileCopy);
+            FileUtils.deleteDirectory(fileRepositoryFileCopy);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
     public static List<String> findPathsFile(String dirRoot, String ext, String subStringToIgnore) {
         List<String> pathsFile = new ArrayList<String>();
@@ -71,4 +95,5 @@ public class FileUtil {
         }
         return pathsFile;
     }
+
 }

@@ -13,11 +13,15 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 
 public class RepositoryUtil {
-    public static void checkoutRepository(Repository repository, String idCommit) throws IOException, RefAlreadyExistsException, RefNotFoundException, InvalidRefNameException, CheckoutConflictException, GitAPIException {
+    public static void checkoutRepository(Repository repository, String idCommit){
         System.out.println("chackout at "+idCommit+"...");
         Git git = new Git(repository);
-        git.clean().setForce(true).call();
-        git.reset().setMode(ResetCommand.ResetType.HARD).call();
-        git.checkout().setForced(true).setName(idCommit).call();
+        try {
+            git.clean().setForce(true).call();
+            git.reset().setMode(ResetCommand.ResetType.HARD).call();
+            git.checkout().setForced(true).setName(idCommit).call();
+        } catch (GitAPIException exception) {
+            exception.printStackTrace();
+        }
     }
 }
