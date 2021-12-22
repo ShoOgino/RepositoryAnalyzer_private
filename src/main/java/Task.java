@@ -106,7 +106,7 @@ public class Task implements Callable<String> {
                     }
                 }
                 for(Module module: modulesTarget.values()){
-                    module.calcMetricsProcess2(commitsAll, modulesAll);
+                    module.calcMetricsProcess2(commitsAll, modulesAll, "giger");
                 }
             }
             if(product.contains("metricsProcess")){

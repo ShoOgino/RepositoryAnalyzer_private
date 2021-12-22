@@ -212,12 +212,13 @@ public class Modules extends Thread implements Map<String, Module> {
     Committers committersAll;
     String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture;
     String[] intervalRevision_referableCalculatingMetricsDependentOnFuture;
+    String selection ="giger";
     public void run()  {
         System.out.println("thread started");
         for(Module module:ProgressBar.wrap(modules.values(), "run")){
             module.identifyCommitGraphTarget(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture);
             module.calcCommitGraph(commitsAll, modulesAll, committersAll);
-            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture);
+            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture, selection);
         }
         System.out.println("thread ends");
     }
