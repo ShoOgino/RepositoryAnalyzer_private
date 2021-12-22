@@ -718,62 +718,58 @@ public class CommitsOnModule  implements Cloneable {
         calcGetBuggy(dateCommitInducingBugsReferableFrom, dateTarget, dateCommitFixingBugsReferableUntil);
     }
     public void calcMetricsIndependentOnFuture1(Commits commitsAll, int dateFrom_ReferableToCalculateMetricsIndependentOfFuture, int dateUntil_ReferableToCalculateMetricsIndependentOfFuture, String selection) {
-        if(Arrays.asList("all", "giger").contains(selection))
-        if(Arrays.asList("all", "ming").contains(selection))
-        if(Arrays.asList("all", "hata").contains(selection))
-        if(Arrays.asList("all").contains(selection))
-            if(Arrays.asList("all", "ming", "hata").contains(selection)) calcPeriodExisting(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
+        if(Arrays.asList("all", "ming", "hata").contains(selection)) calcPeriodExisting(dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
         if(Arrays.asList("all", "ming").contains(selection)) calcPeriodExistingWeighted(dateUntil_ReferableToCalculateMetricsIndependentOfFuture);
-        if(Arrays.asList("all", "ming", "hata").contains(selection)) calcNumOfCommits();
-        if(Arrays.asList("all", "ming", "hata").contains(selection)) calcNumOfCommitsFixingBugs();
+        if(Arrays.asList("all", "giger", "hata", "ming").contains(selection)) calcNumOfCommits();
+        if(Arrays.asList("all", "hata", "ming").contains(selection)) calcNumOfCommitsFixingBugs();
         if(Arrays.asList("all", "ming").contains(selection)) calcNumOfCommitsRefactoring(commitsAll);
-        calcNumOfBugreportsUnique();
-        calcNumOfCommitsInducingBugs();
-        calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(commitsAll);
-        calcNumOfCommittersUnique();
-        calcNumOfCommittersUnfamiliar();
-        calcNumOfCommittersFamiliar();
-        calcMaxOfRatio_numOfCommitsOfACommitter();
-        calc_maxOfRatio_numOfChangesLineOfACommitter();
-        calcGeometricmean_sumOfChangesLineByTheCommitter();
-        calcMaxOfInterval();
-        calcMinOfInterval();
-        calcAvgOfInterval();
-        calcSumOfAdditionsLine();
-        calcMaxOfAdditionsLine();
-        calcAvgOfAdditionsLine();
-        calcSumOfDeletionsLine();
-        calcMaxOfDeletionsLine();
-        calcAvgOfDeletionsLine();
-        calcSumOfChangesLine();
-        calcSumOfChurnLine();
-        calcMaxOfChurnLine();
-        calcAvgOfChurnLine();
-        calcSumOfAdditionsStatement();
-        calcMaxOfAdditionsStatement();
-        calcAvgOfAdditionsStatement();
-        calcSumOfDeletionsStatement();
-        calcMaxOfDeletionsStatement();
-        calcAvgOfDeletionsStatement();
-        calcSumOfChurnsStatement();
-        calcMaxOfChurnsStatement();
-        calcAvgOfChurnsStatement();
-        calcSumOfChangesStatement();
-        calcMaxOfChangesStatement();
-        calcAvgOfChangesStatement();
-        calcSumOfChangesDeclarationItself();
-        calcSumOfChangesCondition();
-        calcSumOfAdditionStatementElse();
-        calcSumOfDeletionStatementElse();
-        calcSumOfChangesStatementElse();
-        calcComplexityHistory(commitsAll);
-        calcMaxOfModulesCommittedSimultaneously(commitsAll);
-        calcAvgOfModulesCommittedSimultaneously(commitsAll);
+        if(Arrays.asList("all", "hata").contains(selection)) calcNumOfBugreportsUnique();
+        if(Arrays.asList("all").contains(selection)) calcNumOfCommitsInducingBugs();
+        if(Arrays.asList("all", "hata").contains(selection)) calcNumOfCommitsOtherModulesGetBuggyOnTheCommit(commitsAll);
+        if(Arrays.asList("all", "giger", "hata", "ming").contains(selection)) calcNumOfCommittersUnique();
+        if(Arrays.asList("all", "hata", "ming").contains(selection)) calcNumOfCommittersUnfamiliar();
+        if(Arrays.asList("all", "hata").contains(selection)) calcNumOfCommittersFamiliar();
+        if(Arrays.asList("all", "hata").contains(selection)) calcMaxOfRatio_numOfCommitsOfACommitter();
+        if(Arrays.asList("all", "ming").contains(selection)) calc_maxOfRatio_numOfChangesLineOfACommitter();
+        if(Arrays.asList("all", "ming").contains(selection)) calcGeometricmean_sumOfChangesLineByTheCommitter();
+        if(Arrays.asList("all", "hata").contains(selection)) calcMaxOfInterval();
+        if(Arrays.asList("all", "hata").contains(selection)) calcMinOfInterval();
+        if(Arrays.asList("all", "hata").contains(selection)) calcAvgOfInterval();
+        if(Arrays.asList("all", "hata", "ming").contains(selection)) calcSumOfAdditionsLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcMaxOfAdditionsLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcAvgOfAdditionsLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcSumOfDeletionsLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcMaxOfDeletionsLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcAvgOfDeletionsLine();
+        if(Arrays.asList("all").contains(selection)) calcSumOfChangesLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcSumOfChurnLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcMaxOfChurnLine();
+        if(Arrays.asList("all", "ming").contains(selection)) calcAvgOfChurnLine();
+        if(Arrays.asList("all", "giger").contains(selection)) calcSumOfAdditionsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcMaxOfAdditionsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcAvgOfAdditionsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcSumOfDeletionsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcMaxOfDeletionsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcAvgOfDeletionsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcSumOfChurnsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcMaxOfChurnsStatement();
+        if(Arrays.asList("all", "giger").contains(selection)) calcAvgOfChurnsStatement();
+        if(Arrays.asList("all").contains(selection)) calcSumOfChangesStatement();
+        if(Arrays.asList("all").contains(selection)) calcMaxOfChangesStatement();
+        if(Arrays.asList("all").contains(selection)) calcAvgOfChangesStatement();
+        if(Arrays.asList("all", "giger", "ming").contains(selection)) calcSumOfChangesDeclarationItself();
+        if(Arrays.asList("all", "giger", "ming").contains(selection)) calcSumOfChangesCondition();
+        if(Arrays.asList("all", "giger").contains(selection)) calcSumOfAdditionStatementElse();
+        if(Arrays.asList("all", "giger").contains(selection)) calcSumOfDeletionStatementElse();
+        if(Arrays.asList("all", "ming").contains(selection)) calcSumOfChangesStatementElse();
+        if(Arrays.asList("all", "ming").contains(selection)) calcComplexityHistory(commitsAll);
+        if(Arrays.asList("all", "ming").contains(selection)) calcMaxOfModulesCommittedSimultaneously(commitsAll);
+        if(Arrays.asList("all", "ming").contains(selection)) calcAvgOfModulesCommittedSimultaneously(commitsAll);
     }
-    public void calcMetricsIndependentOnFuture2(Commits commitsAll, Modules modulesAll) {
-        calcNumOfCommitsOtherModulesHasBeenFixedOnTheCommit(commitsAll, modulesAll);
-        calcNumOfCommittersUniqueNeighbor(commitsAll, modulesAll);
-        calcNumOfCommitsNeighbor(commitsAll, modulesAll);
-        calcComplexityHistoryNeighbor(commitsAll, modulesAll);
+    public void calcMetricsIndependentOnFuture2(Commits commitsAll, Modules modulesAll, String selection) {
+        if(Arrays.asList("all", "hata").contains(selection)) calcNumOfCommitsOtherModulesHasBeenFixedOnTheCommit(commitsAll, modulesAll);
+        if(Arrays.asList("all", "ming").contains(selection)) calcNumOfCommittersUniqueNeighbor(commitsAll, modulesAll);
+        if(Arrays.asList("all", "ming").contains(selection)) calcNumOfCommitsNeighbor(commitsAll, modulesAll);
+        if(Arrays.asList("all", "ming").contains(selection)) calcComplexityHistoryNeighbor(commitsAll, modulesAll);
     }
 }

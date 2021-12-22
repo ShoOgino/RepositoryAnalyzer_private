@@ -42,7 +42,7 @@ public class Commits implements Map<String, Commit> {
         int NOfCPU = r.availableProcessors();
 
         List<CommitsThread> commitsThreads = new LinkedList<>();
-        List<List<RevCommit>> revcommitsSplitted = Lists.partition(commitsAll, commitsAll.size() / NOfCPU);
+        List<List<RevCommit>> revcommitsSplitted = Lists.partition(commitsAll, commitsAll.size() / NOfCPU + 1);
         for (int i = 0; i < NOfCPU; i++) {
             commitsThreads.add(new CommitsThread(repository, revcommitsSplitted.get(i), pathCommits));
             commitsThreads.get(i).start();

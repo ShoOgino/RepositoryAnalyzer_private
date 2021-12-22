@@ -101,7 +101,7 @@ public class Module  implements Cloneable {
         commitsOnModuleInInterval.calcMetricsIndependentOnFuture1(commitsAll, dateFrom_ReferableToCalculateMetricsIndependentOfFuture, dateUntil_ReferableToCalculateMetricsIndependentOfFuture, selection);
     }
     public void calcMetricsProcess2(Commits commitsAll, Modules modulesAll, String selection){
-        commitsOnModuleInInterval.calcMetricsIndependentOnFuture2(commitsAll, modulesAll);
+        commitsOnModuleInInterval.calcMetricsIndependentOnFuture2(commitsAll, modulesAll, selection);
     }
 
     public String outputRow(String selection){

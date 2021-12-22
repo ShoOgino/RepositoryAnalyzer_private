@@ -101,6 +101,7 @@ public class Modules extends Thread implements Map<String, Module> {
                         idsCommitTarget.addAll(moduleBefore.commitsOnModuleAll.values().stream().map(a -> a.idCommit).collect(Collectors.toList()));
 
                     Commit commitNow = commits.get(commitOnModuleTarget.idCommitParent);
+                    System.out.print("");
                     while (true) {
                         if (idsCommitTarget.contains(commitNow.id)) {
                             boolean isOK = false;
