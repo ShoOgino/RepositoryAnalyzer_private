@@ -21,10 +21,21 @@ public class CommitsOnModule  implements Cloneable {
     public void calcIsBuggy(int dateTarget, int dateUntilReferableCalculatingIsBuggy) {
         for (CommitOnModule commitOnModuleFixing : commitsOnModule.values()) {
             for (String idCommitInducingBugsThatThisCommitFixes : commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes) {
-                CommitOnModule commitOnModuleInducing = queryByIdCommit(idCommitInducingBugsThatThisCommitFixes).get(0);
-                if (commitOnModuleInducing.date < dateTarget & dateTarget < commitOnModuleFixing.date & commitOnModuleFixing.date < dateUntilReferableCalculatingIsBuggy) {
-                    this.isBuggy = 1;
-                    return;
+                try {
+                    CommitOnModule commitOnModuleInducing = queryByIdCommit(idCommitInducingBugsThatThisCommitFixes).get(0);
+                    if (commitOnModuleInducing.date < dateTarget & dateTarget < commitOnModuleFixing.date & commitOnModuleFixing.date < dateUntilReferableCalculatingIsBuggy) {
+                        this.isBuggy = 1;
+                        return;
+                    }
+                }catch(Exception e){
+                    System.out.println(commitOnModuleFixing.pathNew);
+                    for(CommitOnModule commitOnModule:commitsOnModule.values()) {
+                        System.out.println(commitOnModule.idCommit);
+                    }
+                    System.out.println();
+                    System.out.println(commitOnModuleFixing.idCommit);
+                    System.out.println(commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes);
+                    //e.printStackTrace();
                 }
             }
         }
@@ -99,6 +110,7 @@ public class CommitsOnModule  implements Cloneable {
         int numOfCommitsRefactoringTemp = 0;
         for (CommitOnModule commitOnModule : commitsOnModule.values()) {
             Commit commit = commitsAll.get(commitOnModule.idCommit);
+            //todo
             if (commit.message.contains("refactor")) {
                 numOfCommitsRefactoringTemp++;
             }
@@ -754,7 +766,7 @@ public class CommitsOnModule  implements Cloneable {
         if(Arrays.asList("all", "giger").contains(selection)) calcSumOfChurnsStatement();
         if(Arrays.asList("all", "giger").contains(selection)) calcMaxOfChurnsStatement();
         if(Arrays.asList("all", "giger").contains(selection)) calcAvgOfChurnsStatement();
-        if(Arrays.asList("all").contains(selection)) calcSumOfChangesStatement();
+        if(Arrays.asList("all", "ming").contains(selection)) calcSumOfChangesStatement();
         if(Arrays.asList("all").contains(selection)) calcMaxOfChangesStatement();
         if(Arrays.asList("all").contains(selection)) calcAvgOfChangesStatement();
         if(Arrays.asList("all", "giger", "ming").contains(selection)) calcSumOfChangesDeclarationItself();

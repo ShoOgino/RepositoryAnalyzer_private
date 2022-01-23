@@ -11,7 +11,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 public class Tasks {
-    @JsonProperty("isMultiprocess") Boolean isMultiprocess;
+    @JsonProperty("isMultiProcess") boolean isMultiProcess;
     @JsonProperty("tasks") List<Task> tasks = new ArrayList<>();
 
     public void execute() throws Exception {
@@ -27,15 +27,6 @@ public class Tasks {
             }
         }
 
-        //同時実行プロセス数の決定
-        int numOfProcesses4Tasks = 0;
-        if(isMultiprocess){
-            Runtime r = Runtime.getRuntime();
-            int numOfCPUs = r.availableProcessors();
-            numOfProcesses4Tasks = numOfCPUs - 2;
-        }else{
-            numOfProcesses4Tasks = 1;
-        }
         //タスクを対象プロジェクトごとに実行。
         //まず対象プロジェクトを分析 → メトリクス算出タスクへ。
         for(String pathProject: pathProject2Tasks.keySet()){
@@ -59,17 +50,9 @@ public class Tasks {
             List<Future<String>> resultList = null;
             for(Integer priority: priority2Tasks.keySet().stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList())){
                 System.out.println("priority: "+ String.valueOf(priority));
-                ExecutorService pool;
-                pool = Executors.newFixedThreadPool(numOfProcesses4Tasks);
-                resultList = pool.invokeAll(priority2Tasks.get(priority));
-                for(Future<String> result : resultList){
-                    try {
-                        System.out.println(result.get());
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
+                for(Task task: priority2Tasks.get(priority)){
+                    task.execute(isMultiProcess);
                 }
-                pool.shutdown();
             }
         }
     }

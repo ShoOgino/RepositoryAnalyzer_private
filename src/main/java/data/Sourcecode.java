@@ -20,7 +20,7 @@ public class Sourcecode {
     public void calcNumOfLines(){
         this.numOfLines = rawdata.split("\n").length;
     }
-    int fanin = 0;
+    public int fanin = 0;
     int fanout = 0;
     public void calcFanOut() {
         VisitorFanout visitor = new VisitorFanout();

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ast.RequesterFanIn;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.Lists;
 import misc.DeserializerModification;
 import me.tongfei.progressbar.ProgressBar;
 import org.apache.commons.collections4.keyvalue.MultiKey;
@@ -22,7 +23,12 @@ import util.FileUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static util.FileUtil.findPathsFile;
@@ -31,30 +37,23 @@ import static util.RepositoryUtil.checkoutRepository;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class Modules extends Thread implements Map<String, Module> {
-    LinkedHashMap<String, Module> modules = new LinkedHashMap<>();
+    public LinkedHashMap<String, Module> modules = new LinkedHashMap<>();
 
-    public  Modules(){ }
-
-    public Modules(List<Module> modules, Commits commitsAll, Modules modulesAll, Committers committersAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture) {
-        for(Module module:modules) {
-            this.modules.put(module.path, module);
-        }
-        this.commitsAll = commitsAll;
-        this.modulesAll = modulesAll;
-        this.committersAll = committersAll;
-        this.intervalRevision_referableCalculatingMetricsIndependentOnFuture = intervalRevision_referableCalculatingMetricsIndependentOnFuture;
-        this.intervalRevision_referableCalculatingMetricsDependentOnFuture = intervalRevision_referableCalculatingMetricsDependentOnFuture;
+    public Modules() {
     }
+
     public int getIdModule(String pathNew) {
         List<String> paths = new ArrayList<>(modules.keySet());
         return paths.indexOf(pathNew);
     }
+
     public void analyzeAllModules(Commits commits, Bugs bugsAll) {
         identifyChangesOnModule(commits);
         analyzeDevelopmentHistoryOnModule(commits);
         completeDevelopmentHistoryOnModule();
         embedInformationBugInHistoryOnModule(bugsAll);
     }
+
     private void identifyChangesOnModule(Commits commits) {
         for (Commit commit : ProgressBar.wrap(commits.values(), "identifyChangeOnModules")) {
             for (CommitsOnModule commitsOnModule : commit.idParent2Modifications.values()) {
@@ -69,6 +68,7 @@ public class Modules extends Thread implements Map<String, Module> {
             }
         }
     }
+
     private void putChangeOnModule(CommitOnModule commitOnModule, String pathModule) {
         if (!modules.containsKey(pathModule)) {
             Module module = new Module(pathModule);
@@ -76,6 +76,7 @@ public class Modules extends Thread implements Map<String, Module> {
         }
         modules.get(pathModule).commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
     }
+
     private void analyzeDevelopmentHistoryOnModule(Commits commits) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "identifyCommitsParent")) {
             Module moduleTarget = modules.get(pathModule);
@@ -126,6 +127,7 @@ public class Modules extends Thread implements Map<String, Module> {
             }
         }
     }
+
     private void completeDevelopmentHistoryOnModule() {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "completeCommitHistory")) {
             Module moduleTarget = modules.get(pathModule);
@@ -134,8 +136,8 @@ public class Modules extends Thread implements Map<String, Module> {
             while (0 < modificationsTarget.size()) {//過去方向
                 commitOnModuleTarget = modificationsTarget.poll();
                 for (CommitOnModule commitOnModule : commitOnModuleTarget.parents.values()) {
-                    moduleTarget.commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
                     if (!moduleTarget.commitsOnModuleAll.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
+                        moduleTarget.commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
                         modificationsTarget.add(commitOnModule);
                     }
                 }
@@ -144,33 +146,35 @@ public class Modules extends Thread implements Map<String, Module> {
             while (0 < modificationsTarget.size()) {//未来方向
                 commitOnModuleTarget = modificationsTarget.poll();
                 for (CommitOnModule commitOnModule : commitOnModuleTarget.children.values()) {
-                    moduleTarget.commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
                     if (!moduleTarget.commitsOnModuleAll.containsValue(commitOnModule) & !modificationsTarget.contains(commitOnModule)) {
+                        moduleTarget.commitsOnModuleAll.put(commitOnModule.idCommitParent, commitOnModule.idCommit, commitOnModule.pathOld, commitOnModule.pathNew, commitOnModule);
                         modificationsTarget.add(commitOnModule);
                     }
                 }
             }
         }
     }
+
     private void embedInformationBugInHistoryOnModule(Bugs bugsAll) {
-        for(String idBug: bugsAll.keySet()){
+        for (String idBug : bugsAll.keySet()) {
             Bug bug = bugsAll.get(idBug);
-            for(BugAtomic bugAtomic: bug.bugAtomics){
-                if(Objects.equals(bugAtomic.path,"/dev/null")) continue;
+            for (BugAtomic bugAtomic : bug.bugAtomics) {
+                if (Objects.equals(bugAtomic.path, "/dev/null")) continue;
                 Module module = modules.get(bugAtomic.path);
-                for(CommitOnModule commitOnModule: module.commitsOnModuleAll.queryByIdCommit(bugAtomic.idCommitFix)){
+                for (CommitOnModule commitOnModule : module.commitsOnModuleAll.queryByIdCommit(bugAtomic.idCommitFix)) {
                     commitOnModule.IdsCommitsInducingBugsThatThisCommitFixes.addAll(bugAtomic.idsCommitInduce);
                     commitOnModule.IdsBugThatThisCommitFixing.add(bug.id);
                 }
-                for(String idCommitInduce: bugAtomic.idsCommitInduce){
-                    for(CommitOnModule commitOnModule: module.commitsOnModuleAll.queryByIdCommit(idCommitInduce)){
+                for (String idCommitInduce : bugAtomic.idsCommitInduce) {
+                    for (CommitOnModule commitOnModule : module.commitsOnModuleAll.queryByIdCommit(idCommitInduce)) {
                         commitOnModule.IdsCommitsFixingBugThatThisCommitInduces.add(bugAtomic.idCommitFix);
                     }
                 }
             }
         }
     }
-    public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget){
+
+    public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget) {
         List<String> pathSources = new ArrayList<>();
         RevCommit revCommit = null;
         try {
@@ -185,57 +189,110 @@ public class Modules extends Thread implements Map<String, Module> {
             treeWalk.setFilter(PathSuffixFilter.create(".mjava"));
             while (true) {
                 if (!treeWalk.next()) break;
+                //でかすぎるのではじく。
+                if (Objects.equals(treeWalk.getPathString(), "lucene/analysis/common/src/java/org/apache/lucene/analysis/miscellaneous/ASCIIFoldingFilter#foldToASCII(char[],int).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/parser/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser4$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/parser/CUP$PhpAstParser5$actions[PhpAstParser5]#CUP$PhpAstParser5$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/parser/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser4$actions(PhpAstParser4).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/phpModel/parser/php4/CUP$PhpParser4$actions[PhpParser4]#CUP$PhpParser4$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/phpModel/parser/php5/CUP$PhpParser5$actions[PhpParser5]#CUP$PhpParser5$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/scanner/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser4$do_action(int,java_cup.runtime.lr_parser,java.util.Stack,int).mjava"))
+                    continue;
+                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/scanner/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser5$do_action(int,java_cup.runtime.lr_parser,java.util.Stack,int).mjava"))
+                    continue;
+                if (treeWalk.getPathString().contains("java_cup.runtime.lr_parser")) continue;
                 pathSources.add(treeWalk.getPathString());
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         for (String pathSource : ProgressBar.wrap(pathSources, "identifyTargetModules")) {
             Module moduleTarget = modulesAll.get(pathSource).clone();
-            if (!pathSource.contains("test")){
+            if (!pathSource.contains("test")) {
                 modules.put(pathSource, moduleTarget);
             }
         }
     }
+
     public void identifyCommitsOnModuleInInterval(Commits commitsAll, String[] intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture) {
-        for(Module module: modules.values()){
+        for (Module module : modules.values()) {
             module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture);
         }
     }
-    public void calculateAST(Repository repositoryMethod, String revisionMethodTarget)  {
+
+    public void calculateAST(Repository repositoryMethod, String revisionMethodTarget) {
         for (String pathModule : ProgressBar.wrap(modules.keySet(), "calculateAST")) {
             Module module = modules.get(pathModule);
             module.calcAST();
         }
     }
-    Commits commitsAll;
-    Modules modulesAll;
-    Committers committersAll;
-    String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture;
-    String[] intervalRevision_referableCalculatingMetricsDependentOnFuture;
-    String selection ="giger";
-    public void run()  {
-        System.out.println("thread started");
-        for(Module module:ProgressBar.wrap(modules.values(), "run")){
-            module.identifyCommitGraphTarget(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture);
-            module.calcCommitGraph(commitsAll, modulesAll, committersAll);
-            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture, selection);
+
+    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+        Runtime r = Runtime.getRuntime();
+        int numOfProcessors = r.availableProcessors() - 2;
+        Collection<Callable<Void>> jobs = new ArrayList<Callable<Void>>();
+        ExecutorService threadpool = Executors.newFixedThreadPool(numOfProcessors);
+        List<List<Module>> modulesSplitted = Lists.partition(new ArrayList<>(this.modules.values()), this.modules.size() / numOfProcessors + 1);
+        for (List<Module> modulesTemp : modulesSplitted) {
+            jobs.add(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    for (Module moduleTemp : ProgressBar.wrap(modulesTemp, "calcGraphCommit")) {
+                        moduleTemp.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+                        moduleTemp.calcCommitGraph(commitsAll, modulesAll, authors);
+                    }
+                    Thread.sleep(100L);
+                    return null;
+                }
+            });
         }
-        System.out.println("thread ends");
-    }
-    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics)  {
-        for (Module module : ProgressBar.wrap(modules.values(), "calculateCommitGraph")) {
-            module.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-            module.calcCommitGraph(commitsAll, modulesAll, authors);
+        try {
+            threadpool.invokeAll(jobs);
+            threadpool.shutdown();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            threadpool.shutdown();
         }
     }
-    public void calculateMetricsCode(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget, String selection){
+
+    public void calculateMetricsCode(Repository repositoryFile, String revisionFileTarget, Repository repositoryMethod, String revisionMethodTarget, String selection) {
         checkoutRepository(repositoryFile, revisionFileTarget);
-        for (String pathModule : ProgressBar.wrap(modules.keySet(), "calcCodeMetrics")) {
-            Module module = modules.get(pathModule);
-            module.identifySourcecodeTarget(repositoryMethod, revisionMethodTarget);
-            module.calcMetricsCode(selection);
+        Runtime r = Runtime.getRuntime();
+        int numOfProcessors = r.availableProcessors() - 2;
+        Collection<Callable<Void>> jobs = new ArrayList<Callable<Void>>();
+        ExecutorService threadpool = Executors.newFixedThreadPool(numOfProcessors);
+        List<List<Module>> modulesSplitted = Lists.partition(new ArrayList<>(this.modules.values()), this.modules.size() / numOfProcessors + 1);
+        for (List<Module> modulesTemp : modulesSplitted) {
+            jobs.add(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    for (Module moduleTemp : ProgressBar.wrap(modulesTemp, "calcMetricsCode")) {
+                        moduleTemp.identifySourcecodeTarget(repositoryMethod, revisionMethodTarget);
+                        moduleTemp.calcMetricsCode(selection);
+                    }
+                    Thread.sleep(100L);
+                    return null;
+                }
+            });
         }
+        try {
+            threadpool.invokeAll(jobs);
+            threadpool.shutdown();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            threadpool.shutdown();
+        }
+
+        calculateFanin(repositoryFile);
+    }
+
+    public void calculateFanin(Repository repositoryFile) {
         //fanInを計測
         try {
             String pathRepositoryFile = repositoryFile.getDirectory().getParentFile().getAbsolutePath();
@@ -271,21 +328,65 @@ public class Modules extends Thread implements Map<String, Module> {
                 }
             }
             System.out.println("FanIn caluculated");
-        }catch(Exception exception){
+        } catch (Exception exception) {
             exception.printStackTrace();
         }
     }
+
     public void calculateMetricsProcess(Commits commitsAll, Modules modulesAll, String[] intervalRevision_referableCalculatingMetricsIndependentOnFuture, String[] intervalRevision_referableCalculatingMetricsDependentOnFuture, String selection) {
         for (Module module : ProgressBar.wrap(modules.values(), "identifing commitGraph To calculate process metrics")) {
             module.identifyCommitGraphTarget(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture);
         }
-        for (Module module : ProgressBar.wrap(modules.values(), "calcProcessMetrics1")) {
-            module.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture, selection);
+        //processMetrics1
+        Runtime r = Runtime.getRuntime();
+        int numOfProcessors = r.availableProcessors() - 2;
+        Collection<Callable<Void>> jobs = new ArrayList<Callable<Void>>();
+        ExecutorService threadpool = Executors.newFixedThreadPool(numOfProcessors);
+        List<List<Module>> modulesSplitted = Lists.partition(new ArrayList<>(this.modules.values()), this.modules.size() / numOfProcessors + 1);
+        for (List<Module> modulesTemp : modulesSplitted) {
+            jobs.add(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    for (Module moduleTemp : ProgressBar.wrap(modulesTemp, "calcMetricsProcess1")) {
+                        moduleTemp.calcMetricsProcess1(commitsAll, intervalRevision_referableCalculatingMetricsIndependentOnFuture, intervalRevision_referableCalculatingMetricsDependentOnFuture, selection);
+                    }
+                    Thread.sleep(100L);
+                    return null;
+                }
+            });
         }
-        for (Module module : ProgressBar.wrap(modules.values(), "calcProcessMetrics2")) {
-            module.calcMetricsProcess2(commitsAll, modulesAll, selection);
+        try {
+            threadpool.invokeAll(jobs);
+            threadpool.shutdown();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            threadpool.shutdown();
+        }
+
+        //processMetrics2
+        jobs = new ArrayList<Callable<Void>>();
+        threadpool = Executors.newFixedThreadPool(numOfProcessors);
+        for (List<Module> modulesTemp : modulesSplitted) {
+            jobs.add(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    for (Module moduleTemp : ProgressBar.wrap(modulesTemp, "calcMetricsProcess2")) {
+                        moduleTemp.calcMetricsProcess2(commitsAll, modulesAll, selection);
+                    }
+                    Thread.sleep(100L);
+                    return null;
+                }
+            });
+        }
+        try {
+            threadpool.invokeAll(jobs);
+            threadpool.shutdown();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            threadpool.shutdown();
         }
     }
+
     public void saveAsJson(String pathModules) {
         int count = 0;
         for (Entry<String, Module> entry : ProgressBar.wrap(modules.entrySet(), "saveModules")) {
@@ -310,7 +411,8 @@ public class Modules extends Thread implements Map<String, Module> {
             }
         }
     }
-    public void saveAsCSV(String pathOutput, String selection){
+
+    public void saveAsCSV(String pathOutput, String selection) {
         File dir = new File(pathOutput);
         File dirParent = new File(dir.getParent());
         dirParent.mkdirs();
@@ -323,63 +425,89 @@ public class Modules extends Thread implements Map<String, Module> {
                 fileWriter.write(module.outputRow(selection));
             }
             fileWriter.close();
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
     public void loadModulesFromFile(String pathModules) {
         List<String> paths = FileUtil.findPathsFile(pathModules, ".json");
         for (String path : ProgressBar.wrap(paths, "loadModulesFromFile")) {
             try {
                 String strFile = readFile(path);
-                if(strFile.length()==0){
+                if (strFile.length() == 0) {
                     System.out.println(path);
                 }
                 ObjectMapper mapper = new ObjectMapper();
                 SimpleModule simpleModule = new SimpleModule();
                 simpleModule.addKeyDeserializer(MultiKey.class, new DeserializerModification());
                 mapper.registerModule(simpleModule);
-                Module module = mapper.readValue(strFile, new TypeReference<Module>() {});
+                Module module = mapper.readValue(strFile, new TypeReference<Module>() {
+                });
                 modules.put(module.path, module);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
-    @Override public int size() {
+
+    @Override
+    public int size() {
         return modules.size();
     }
-    @Override public boolean isEmpty() {
+
+    @Override
+    public boolean isEmpty() {
         return modules.isEmpty();
     }
-    @Override public boolean containsKey(Object key) {
+
+    @Override
+    public boolean containsKey(Object key) {
         return modules.containsKey(key);
     }
-    @Override public boolean containsValue(Object value) {
+
+    @Override
+    public boolean containsValue(Object value) {
         return modules.containsValue(value);
     }
-    @Override public Module get(Object key) {
+
+    @Override
+    public Module get(Object key) {
         return modules.get(key);
     }
-    @Override public Module put(String key, Module value) {
+
+    @Override
+    public Module put(String key, Module value) {
         return modules.put(key, value);
     }
-    @Override public Module remove(Object key) {
+
+    @Override
+    public Module remove(Object key) {
         return modules.remove(key);
     }
-    @Override public void putAll(Map<? extends String, ? extends Module> m) {
+
+    @Override
+    public void putAll(Map<? extends String, ? extends Module> m) {
         modules.putAll(m);
     }
-    @Override public void clear() {
+
+    @Override
+    public void clear() {
         modules.clear();
     }
-    @Override public Set<String> keySet() {
+
+    @Override
+    public Set<String> keySet() {
         return modules.keySet();
     }
-    @Override public Collection<Module> values() {
+
+    @Override
+    public Collection<Module> values() {
         return modules.values();
     }
-    @Override public Set<Entry<String, Module>> entrySet() {
+
+    @Override
+    public Set<Entry<String, Module>> entrySet() {
         return modules.entrySet();
     }
 

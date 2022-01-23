@@ -330,11 +330,15 @@ public class CommitOnModule {
 	int[] vectorInterval = new int[1];
 	public void calcVectorInterval() {
 		int minOfInterval = Integer.MAX_VALUE;
-		for (CommitOnModule commitOnModuleParent : this.parents.values()) {
-			int intervalTemp = (this.date - commitOnModuleParent.date) / (60 * 60 * 24);
-			if(intervalTemp< minOfInterval){
-				minOfInterval=intervalTemp;
+		if(0<this.parents.values().size()) {
+			for (CommitOnModule commitOnModuleParent : this.parents.values()) {
+				int intervalTemp = (this.date - commitOnModuleParent.date) / (60 * 60 * 24);
+				if (intervalTemp < minOfInterval) {
+					minOfInterval = intervalTemp;
+				}
 			}
+		}else{
+			minOfInterval = 0;
 		}
 		vectorInterval[0]=minOfInterval;
 	}
@@ -534,6 +538,7 @@ public class CommitOnModule {
 			distiller.extractClassifiedSourceCodeChanges(sourcePrev, sourceCurrent);
 		} catch (Exception e) {
 			e.printStackTrace();
+			System.out.println("distiller error");
 		}
 		return distiller.getSourceCodeChanges();
 	}
