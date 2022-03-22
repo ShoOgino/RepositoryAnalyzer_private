@@ -1,12 +1,19 @@
 package data;
 
-import java.io.IOException;
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.Data;
+import me.tongfei.progressbar.ProgressBar;
+import org.apache.commons.collections4.map.MultiKeyMap;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -103,6 +110,11 @@ public class Module  implements Cloneable {
     public void calcMetricsProcess2(Commits commitsAll, Modules modulesAll, String selection){
         commitsOnModuleInInterval.calcMetricsIndependentOnFuture2(commitsAll, modulesAll, selection);
     }
+    public void delete(){
+        for(CommitOnModule commitOnModule: commitsOnModuleInInterval.values()){
+            commitOnModule.delete();
+        }
+    }
 
     public String outputRow(String selection){
         if(Objects.equals(selection, "ming")) {
@@ -173,5 +185,47 @@ public class Module  implements Cloneable {
             return row;
         }
         return "";
+    }
+
+    public void saveAsJson(String pathOutput){
+        if(this.commitsOnModuleInInterval.size()==0) {
+            //System.out.println(this.path);
+            //System.out.println("size==0");
+            return;
+        }
+        for(CommitOnModule commitOnModule: this.commitsOnModuleInInterval.commitsOnModule.values()){
+            if(commitOnModule.vectorAuthor == null){
+                //System.out.println(this.path);
+                //System.out.println("null element");
+                return;
+            }
+        }
+        //todo
+        this.commitsOnModuleAll.commitsOnModule = new MultiKeyMap<>();
+            String path = pathOutput + "/" + this.path + ".json";
+            File file = new File(path);
+            path = file.getAbsolutePath();
+            if (254 < path.length()) {
+                try {
+                    MessageDigest digest = MessageDigest.getInstance("SHA-1");
+                    byte[] result = digest.digest(this.path.getBytes());
+                    String sha1 = String.format("%040x", new BigInteger(1, result));
+                    path = pathOutput + "/" +  sha1 + ".json";
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+                file = new File(path);
+            }
+            File dir = new File(file.getParent());
+            dir.mkdirs();
+            try (FileOutputStream fos = new FileOutputStream(file);
+                 OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+                 BufferedWriter writer = new BufferedWriter(osw)) {
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.enable(SerializationFeature.INDENT_OUTPUT);
+                mapper.writeValue(writer, this);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
     }
 }

@@ -97,8 +97,9 @@ public class Task implements Callable<String> {
         }
         if (Objects.equals(granularity, "method")) {
             if (revisionMethodTarget == null) return;
+            pathOutput = pathProject + "/output" + "/" + name;
             Modules modulesTarget = new Modules();
-            modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethodTarget);
+            modulesTarget.identifyTargetModules(modulesAll, repositoryMethod, revisionMethodTarget, pathOutput);
             modulesTarget.identifyCommitsOnModuleInInterval(commitsAll, intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture);
             //calculate past metrics
             if (product.contains("AST")) {
@@ -141,13 +142,11 @@ public class Task implements Callable<String> {
                 );
             }
             if (product.contains("graphCommit")) {
-                modulesTarget.calculateCommitGraph(commitsAll, modulesAll, committers, intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture);
+                modulesTarget.calculateCommitGraph(commitsAll, modulesAll, committers, intervalRevisionMethod_referableCalculatingMetricsIndependentOnFuture, pathOutput);
             }
-            //save calculated metrics
-            pathOutput = pathProject + "/output";
             //modulesTarget.saveAsJson(pathOutput);
-            modulesTarget.saveAsCSV(pathOutput + "/" + name + ".csv", "ming");
-            modulesTarget.saveAsJson(pathOutput + "/" + name);
+            modulesTarget.saveAsCSV(pathOutput + ".csv", "ming");
+            //modulesTarget.saveAsJson(pathOutput);
             repositoryFile.close();
             FileUtil.deleteDirectory(pathRepositoryFileCopy);
         }else if(Objects.equals(granularity,"file")){

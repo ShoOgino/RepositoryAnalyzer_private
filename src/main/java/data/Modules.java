@@ -22,13 +22,16 @@ import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import util.FileUtil;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static util.FileUtil.findPathsFile;
@@ -174,7 +177,7 @@ public class Modules extends Thread implements Map<String, Module> {
         }
     }
 
-    public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget) {
+    public void identifyTargetModules(Modules modulesAll, Repository repositoryMethod, String commitTarget, String pathOutput) {
         List<String> pathSources = new ArrayList<>();
         RevCommit revCommit = null;
         try {
@@ -189,24 +192,6 @@ public class Modules extends Thread implements Map<String, Module> {
             treeWalk.setFilter(PathSuffixFilter.create(".mjava"));
             while (true) {
                 if (!treeWalk.next()) break;
-                //でかすぎるのではじく。
-                if (Objects.equals(treeWalk.getPathString(), "lucene/analysis/common/src/java/org/apache/lucene/analysis/miscellaneous/ASCIIFoldingFilter#foldToASCII(char[],int).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/parser/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser4$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/parser/CUP$PhpAstParser5$actions[PhpAstParser5]#CUP$PhpAstParser5$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/parser/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser4$actions(PhpAstParser4).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/phpModel/parser/php4/CUP$PhpParser4$actions[PhpParser4]#CUP$PhpParser4$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/phpModel/parser/php5/CUP$PhpParser5$actions[PhpParser5]#CUP$PhpParser5$do_action(int,org.eclipse.php.internal.core.phpModel.javacup.runtime.lr_parser,java.util.Stack,int).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/scanner/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser4$do_action(int,java_cup.runtime.lr_parser,java.util.Stack,int).mjava"))
-                    continue;
-                if (Objects.equals(treeWalk.getPathString(), "plugins/org.eclipse.php.core/src/org/eclipse/php/internal/core/ast/scanner/CUP$PhpAstParser4$actions[PhpAstParser4]#CUP$PhpAstParser5$do_action(int,java_cup.runtime.lr_parser,java.util.Stack,int).mjava"))
-                    continue;
-                if (treeWalk.getPathString().contains("java_cup.runtime.lr_parser")) continue;
                 pathSources.add(treeWalk.getPathString());
             }
         } catch (Exception e) {
@@ -233,31 +218,58 @@ public class Modules extends Thread implements Map<String, Module> {
         }
     }
 
-    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics) {
+    public void calculateCommitGraph(Commits commitsAll, Modules modulesAll, Committers authors, String[] intervalRevisionMethod_referableCalculatingProcessMetrics, String pathOutput) {
         Runtime r = Runtime.getRuntime();
         int numOfProcessors = r.availableProcessors() - 2;
         Collection<Callable<Void>> jobs = new ArrayList<Callable<Void>>();
-        ExecutorService threadpool = Executors.newFixedThreadPool(numOfProcessors);
-        List<List<Module>> modulesSplitted = Lists.partition(new ArrayList<>(this.modules.values()), this.modules.size() / numOfProcessors + 1);
-        for (List<Module> modulesTemp : modulesSplitted) {
-            jobs.add(new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    for (Module moduleTemp : ProgressBar.wrap(modulesTemp, "calcGraphCommit")) {
-                        moduleTemp.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
-                        moduleTemp.calcCommitGraph(commitsAll, modulesAll, authors);
+        ExecutorService executor = Executors.newFixedThreadPool(numOfProcessors);
+        List<List<Module>> modulesSplitted = Lists.partition(new ArrayList<>(this.modules.values()), 5);
+        for (int i=0; i<modulesSplitted.size(); i++) {
+            List<Module> modulesTemp = modulesSplitted.get(i);
+            int finalI = i;
+            jobs.add(
+                    new Callable() {
+                        @Override
+                        public Object call() throws Exception {
+                                for (Module moduleTemp : ProgressBar.wrap(modulesTemp, "calcGraphCommit" + "[" + finalI + "]")) {
+                                    try {
+                                        File file = new File(pathOutput + "/" + finalI + ".txt");
+                                        FileWriter filewriter = new FileWriter(file, true);
+                                        BufferedWriter bufferedWriter = new BufferedWriter(filewriter);
+                                        bufferedWriter.write(moduleTemp.path);
+                                        bufferedWriter.newLine();
+                                        LocalDateTime dateNow = LocalDateTime.now();
+                                        DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+                                        bufferedWriter.write("    [start] " + dateNow.format(format));
+                                        bufferedWriter.newLine();
+                                        bufferedWriter.close();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                    moduleTemp.identifyCommitGraphTarget(commitsAll, intervalRevisionMethod_referableCalculatingProcessMetrics);
+                                    moduleTemp.calcCommitGraph(commitsAll, modulesAll, authors);
+                                    moduleTemp.saveAsJson(pathOutput);
+                                    moduleTemp.delete();
+
+                                    try {
+                                        Path p = Paths.get(pathOutput + "/" + finalI + ".txt");
+                                        Files.delete(p);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            return null;
+                        }
                     }
-                    Thread.sleep(100L);
-                    return null;
-                }
-            });
+            );
         }
         try {
-            threadpool.invokeAll(jobs);
-            threadpool.shutdown();
+            executor.invokeAll(jobs);
+            executor.shutdown();
         } catch (InterruptedException e) {
             e.printStackTrace();
-            threadpool.shutdown();
+            executor.shutdown();
         }
     }
 
@@ -387,14 +399,21 @@ public class Modules extends Thread implements Map<String, Module> {
         }
     }
 
-    public void saveAsJson(String pathModules) {
+    public void saveAsJson(String pathOutput) {
         int count = 0;
         for (Entry<String, Module> entry : ProgressBar.wrap(modules.entrySet(), "saveModules")) {
-            String path = pathModules + "/" + entry.getKey() + ".json";
+            String path = pathOutput + "/" + entry.getKey() + ".json";
             File file = new File(path);
             path = file.getAbsolutePath();
             if (254 < path.length()) {
-                path = pathModules + "/" + Integer.toString(count) + ".json";
+                try {
+                    MessageDigest digest = MessageDigest.getInstance("SHA-1");
+                    byte[] result = digest.digest(entry.getKey().getBytes());
+                    String sha1 = String.format("%040x", new BigInteger(1, result));
+                    path = pathOutput + "/" +  sha1 + ".json";
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
                 file = new File(path);
             }
             File dir = new File(file.getParent());

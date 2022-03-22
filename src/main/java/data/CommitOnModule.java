@@ -191,8 +191,9 @@ public class CommitOnModule {
 		}
 		this.numOfModulesGetBuggyOnTheCommit = numOfModulesGetBuggyOnTheCommitTemp;
 	}
-	int[] vectorSemanticType = new int[400];
+	int[] vectorSemanticType = null;
 	public void calcVectorSemanticType() {
+		vectorSemanticType = new int[400];
 		try {
 			JdtTreeGenerator jdtTreeGenerator = new JdtTreeGenerator();
 			String sourcePrev = "public class Test{" + this.sourceOld.rawdata + "}";
@@ -322,13 +323,14 @@ public class CommitOnModule {
 			e.printStackTrace();
 		}
 	}
-	int[] vectorAuthor;
+	int[] vectorAuthor = null;
 	public void calcVectorAuthor(Committers authors){
 		vectorAuthor =new int[authors.size()];
 		vectorAuthor[authors.getIdOfAuthor(this.author)]++;
 	}
-	int[] vectorInterval = new int[1];
+	int[] vectorInterval = null;
 	public void calcVectorInterval() {
+		vectorInterval = new int[1];
 		int minOfInterval = Integer.MAX_VALUE;
 		if(0<this.parents.values().size()) {
 			for (CommitOnModule commitOnModuleParent : this.parents.values()) {
@@ -342,8 +344,9 @@ public class CommitOnModule {
 		}
 		vectorInterval[0]=minOfInterval;
 	}
-	int[] vectorType = {0,0,0,0};
+	int[] vectorType = null;
 	public void calcVectorType(){
+		vectorType = new int[]{0,0,0,0};
 		Set<String> content = Arrays.stream(message.split("\\s")).collect(Collectors.toSet());
 		int type = 0;
 		calcIsFix();
@@ -392,8 +395,9 @@ public class CommitOnModule {
 		else if(type==3)vectorType[2]=1;
 		else if(type==4)vectorType[3]=1;
 	}
-	int[] vectorCodeChurn=new int[3];
+	int[] vectorCodeChurn=null;
 	public void calcVectorCodeChurn() {
+		vectorCodeChurn = new int[3];
 		calcNumOfAdditionsLine();
 		vectorCodeChurn[0] = this.numOfAdditionsLine;
 		calcNumOfDeletionsLine();
@@ -401,7 +405,7 @@ public class CommitOnModule {
 		calcNumOfChurnLine();
 		vectorCodeChurn[2] = this.numOfChurnLine;
 	}
-	int[] vectorCochange;
+	int[] vectorCochange = null;
 	public void calcVectorCoChange(Commits commitsAll, Modules modulesAll) {
 		vectorCochange = new int[modulesAll.size()];
 		for (CommitOnModule changeOnModuleCoCommit : commitsAll.get(this.idCommit).idParent2Modifications.get(this.idCommitParent).values()) {
@@ -457,6 +461,15 @@ public class CommitOnModule {
 			if(!commitsOnModule.containsValue(commitOnModule)) commitOnModule.loadAncestors(commitsOnModule);
 		}
 	}
+	public void delete(){
+		this.vectorType = null;
+		this.vectorCochange = null;
+		this.vectorCodeChurn = null;
+		this.vectorInterval = null;
+		this.vectorAuthor = null;
+		this.vectorSemanticType = null;
+	}
+
 	public List<SourceCodeChange> identifySourceCodeChange(CommitOnModule commitOnModule) {
 		String sourcePrev = null;
 		String sourceCurrent = null;
@@ -537,8 +550,8 @@ public class CommitOnModule {
 		try {
 			distiller.extractClassifiedSourceCodeChanges(sourcePrev, sourceCurrent);
 		} catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("distiller error");
+			//e.printStackTrace();
+			//System.out.println("distiller error");
 		}
 		return distiller.getSourceCodeChanges();
 	}

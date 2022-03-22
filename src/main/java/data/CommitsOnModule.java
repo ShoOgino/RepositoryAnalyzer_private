@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class CommitsOnModule  implements Cloneable {
     // todo MultiMapクラスに変更して、DeserializerModificationクラスを消す。
     @JsonDeserialize(keyUsing = DeserializerModification.class)
-    private final MultiKeyMap<String, CommitOnModule> commitsOnModule = new MultiKeyMap<>();
+    public MultiKeyMap<String, CommitOnModule> commitsOnModule = new MultiKeyMap<>();
     // future-dependent metrics
     int isBuggy = 0;
     public void calcIsBuggy(int dateTarget, int dateUntilReferableCalculatingIsBuggy) {
@@ -28,13 +28,13 @@ public class CommitsOnModule  implements Cloneable {
                         return;
                     }
                 }catch(Exception e){
-                    System.out.println(commitOnModuleFixing.pathNew);
-                    for(CommitOnModule commitOnModule:commitsOnModule.values()) {
-                        System.out.println(commitOnModule.idCommit);
-                    }
-                    System.out.println();
-                    System.out.println(commitOnModuleFixing.idCommit);
-                    System.out.println(commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes);
+                    //System.out.println(commitOnModuleFixing.pathNew);
+                    //for(CommitOnModule commitOnModule:commitsOnModule.values()) {
+                    //    System.out.println(commitOnModule.idCommit);
+                    //}
+                    //System.out.println();
+                    //System.out.println(commitOnModuleFixing.idCommit);
+                    //System.out.println(commitOnModuleFixing.IdsCommitsInducingBugsThatThisCommitFixes);
                     //e.printStackTrace();
                 }
             }
